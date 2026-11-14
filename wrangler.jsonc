@@ -6,5 +6,11 @@
     "directory": "./out",
     "html_handling": "force-trailing-slash",
     "not_found_handling": "404-page"
-  }
+  },
+  "routes": [
+    {
+      "pattern": "pawanmishra.link",
+      "custom_domain": true
+    }
+  ]
 }

@@ -59,7 +59,7 @@ The site is a Next.js **static export**. Cloudflare serves the generated `out/` 
 - Build command: `npm run build`
 - Deploy command: `npx wrangler deploy`
 - Root directory: repository root
-- Build environment: `NODE_VERSION=24` and `NEXT_PUBLIC_SITE_URL=https://your-domain.com`
+- Build environment: `NODE_VERSION=24` and `NEXT_PUBLIC_SITE_URL=https://pawanmishra.link`
 
 The explicit assets configuration prevents Wrangler from detecting the project as a server-rendered Next.js app and initiating an OpenNext migration. It preserves trailing-slash routes and serves the generated `404.html` for unknown paths.
 
@@ -70,9 +70,9 @@ npm run build
 npx wrangler deploy --dry-run
 ```
 
-After deployment, open the Worker's **Settings → Domains & Routes → Add → Custom domain** and associate your chosen domain or subdomain. Check existing DNS records on that hostname before replacing anything. Other subdomains can serve different Workers or applications.
+`wrangler.jsonc` attaches `pawanmishra.link` as the production custom domain when deployed. Cloudflare must have an active zone for that domain in the same account. To attach additional subdomains, add their exact hostnames as `custom_domain: true` routes or use the Worker's **Settings → Domains & Routes → Add → Custom domain**. Check existing DNS records on that hostname before replacing anything. Other subdomains can serve different Workers or applications.
 
-Set `NEXT_PUBLIC_SITE_URL` to the final custom-domain origin. This sets metadata and sitemap URLs at build time; rebuild after changing it. Local builds default to `http://localhost:3000`.
+Set `NEXT_PUBLIC_SITE_URL` to the final custom-domain origin. This sets metadata and sitemap URLs at build time; rebuild after changing it. Development defaults to `http://localhost:3000`; production builds default to `https://pawanmishra.link`.
 
 ### Alternative: Cloudflare Pages
 
