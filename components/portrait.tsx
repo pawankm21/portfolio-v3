@@ -8,8 +8,8 @@ const frames = ['right', 'downright', 'down', 'downleft', 'left', 'upperleft', '
 type Gaze = typeof frames[number];
 const centerFrame: Gaze = 'straight';
 const eyes = [
-  { side: 'left', x: 368, y: 472, width: 208, height: 124 },
-  { side: 'right', x: 608, y: 472, width: 208, height: 124},
+  { side: 'left', x: 366, y: 464, width: 208, height: 136 },
+  { side: 'right', x: 610, y: 468, width: 208, height: 134},
 ] as const;
 export function Portrait() {
   const container = useRef<HTMLDivElement>(null);
