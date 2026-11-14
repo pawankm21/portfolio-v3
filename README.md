@@ -47,3 +47,33 @@ The tracker uses each eye's viewport position, clipped pupils, and on-demand ani
 Fonts are bundled locally. Main layouts and MDX render on the server at build time; the portrait and active navigation are the small client components. No animation library is needed for the current interaction. Semantic sections, native disclosure controls, focus outlines, skip navigation, reduced-motion styling, and a custom 404 are included.
 
 A static export has no contact form backend. Contact uses email and social links. There are no fabricated posts, screenshots, testimonials, or project metrics. Actual live Core Web Vitals require production traffic; no benchmark scores are claimed.
+
+## Cloudflare hosting
+
+The site is a Next.js **static export**. Cloudflare serves the generated `out/` files; OpenNext and a Next.js server are not needed.
+
+### Existing Cloudflare Worker (GitHub integration)
+
+- Worker name: `portfolio-v3` (matches `wrangler.jsonc`)
+- Production branch: `main`
+- Build command: `npm run build`
+- Deploy command: `npx wrangler deploy`
+- Root directory: repository root
+- Build environment: `NODE_VERSION=24` and `NEXT_PUBLIC_SITE_URL=https://your-domain.com`
+
+The explicit assets configuration prevents Wrangler from detecting the project as a server-rendered Next.js app and initiating an OpenNext migration. It preserves trailing-slash routes and serves the generated `404.html` for unknown paths.
+
+Validate packaging without deploying:
+
+```sh
+npm run build
+npx wrangler deploy --dry-run
+```
+
+After deployment, open the Worker's **Settings → Domains & Routes → Add → Custom domain** and associate your chosen domain or subdomain. Check existing DNS records on that hostname before replacing anything. Other subdomains can serve different Workers or applications.
+
+Set `NEXT_PUBLIC_SITE_URL` to the final custom-domain origin. This sets metadata and sitemap URLs at build time; rebuild after changing it. Local builds default to `http://localhost:3000`.
+
+### Alternative: Cloudflare Pages
+
+Connect this repository as a Pages project using the Next.js (Static HTML Export) preset, build command `npm run build`, and output directory `out`. Pages does not use a Wrangler deploy command. Associate custom domains through the Pages project's Custom domains settings.

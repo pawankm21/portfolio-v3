@@ -9,3 +9,5 @@ out/
 output/
 .openai/
 previews/**/*.jpg
+.wrangler/
+.dev.vars*
