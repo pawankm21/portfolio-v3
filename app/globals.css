@@ -35,3 +35,4 @@
 
 .career-timeline::before{display:none}.career-stop:not(:last-child)::after{content:"";position:absolute;left:-21px;top:16px;bottom:-7px;width:1px;background:var(--line)}
 @media(min-width:701px){.hero-identity .margin-note{margin-top:210px}}
+.personal-portrait .portrait-stage{aspect-ratio:1199/1312}

@@ -34,13 +34,15 @@ Content is trusted, repository-owned MDX. Do not accept untrusted user-authored 
 
 Company mentions are limited to names, positions, and dates in the experience timeline. Project pages cover personal and earlier work.
 
-## Replace the portrait
+## Portrait and eye artwork
 
-1. Replace `public/portrait/face.svg` with an eye-free face illustration (or a transparent PNG and update `artwork.src`).
-2. Update `artwork` in `components/portrait.tsx`: canvas dimensions and eye centers.
-3. Eye sockets, clips, and pupils are generated from those centers. Adjust radii and movement limits to match the new illustration.
+- `public/portrait/pawan.png`: the supplied eye-free portrait, with its original transparency.
+- `public/portrait/eyes/`: separate left and right eye images, named `<direction>_<eye>.png` (20 files for 10 gaze states).
+- `components/portrait.tsx`: direction mapping and the `eyes` placement configuration. Each eye has a fixed 158 × 115 footprint on the 1199 × 1312 portrait canvas. Size and spacing are independent.
 
-The tracker uses each eye's viewport position, clipped pupils, and on-demand animation frames. It resets on window blur and pointer exit, pauses offscreen, ignores touch pointer movement, and starts disabled for reduced motion. There is a keyboard-accessible pause/enable control. Effect listeners, observers, and frames clean up on navigation.
+The eye frames cover eight directions, a neutral gaze, and a cross-eyed gaze when the pointer is near the nose. SVG masks soften the cutout edges without modifying the source files. Each pair shares the same fixed left/right boxes across all gaze states, preventing shifts when a direction changes.
+
+Tracking uses pointer position relative to the portrait, with at most one scheduled frame per update. It resets on window blur and pointer exit, pauses offscreen, ignores touch pointer movement, and starts disabled for reduced motion. There is a keyboard-accessible pause/enable control. Listeners, observers, and scheduled frames clean up on navigation.
 
 ## Design and performance
 

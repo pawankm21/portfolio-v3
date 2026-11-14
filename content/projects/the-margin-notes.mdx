@@ -16,7 +16,7 @@ This site is the current experiment. The visual direction pairs editorial typogr
 
 The site has three primary pages: Home, Projects, and Writing. It should work with a small amount of real content, stay readable on a phone, and make professional experience easy to find.
 
-The portrait is currently a placeholder illustration. It is not a likeness; the face asset and eye layer are separate so personal artwork can replace it later.
+The portrait uses supplied personal artwork. The eye-free base and directional eye frames are separate, so the interaction can change without redrawing the face.
 
 ## A deliberately small architecture
 
@@ -28,16 +28,16 @@ Only the navigation state and portrait need client-side behavior. The lists, art
 
 ## Making eye contact
 
-Each pupil measures the pointer relative to its own eye center. Its movement is constrained to an ellipse and clipped to its socket. A short interpolation lets it settle into position rather than snapping on every pointer event.
+The pointer is measured relative to the portrait, then mapped to one of eight directional eye frames. A neutral frame appears when tracking is paused; a cross-eyed frame adds a small interaction near the nose. Each eye uses its own fixed placement box, with size and inter-eye spacing configured independently.
 
-Animation frames stop when the eyes settle. The portrait resets when the pointer leaves the window, and tracking is paused when it is offscreen. A keyboard-accessible control pauses the interaction. Reduced-motion preferences disable it by default.
+Frames are scheduled only when the pointer or layout changes. The portrait resets when the pointer leaves the window, and tracking pauses offscreen. A keyboard-accessible control pauses the interaction. Reduced-motion preferences disable it by default.
 
 ## Trade-offs
 
-SVG pupils provide continuous movement with a small asset footprint. A directional sprite sheet could better match pixel artwork, but would require aligning and maintaining separate gaze frames. The current layered structure leaves that option open.
+Directional sprites preserve the style of the supplied portrait. They require careful alignment and switch between discrete directions rather than continuous pupil motion. The base image and eye layers remain separate, with soft SVG masks to blend the cutout edges.
 
 The site's limited content is visible rather than disguised. There are no fabricated client projects or invented performance numbers.
 
 ## What is still evolving
 
-Personal portrait assets, detailed career history, and published engineering notes will make this more personal. Accessibility and layout checks are part of implementation; this page makes no claim about measured production performance yet.
+Published engineering notes and new personal experiments will make this more personal. Accessibility and layout checks are part of implementation; this page makes no claim about measured production performance yet.
