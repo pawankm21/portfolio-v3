@@ -42,7 +42,7 @@ Company mentions are limited to names, positions, and dates in the experience ti
 
 The eye frames cover eight directions, a neutral gaze, and a cross-eyed gaze when the pointer is near the nose. SVG masks soften the cutout edges without modifying the source files. Each pair shares the same fixed left/right boxes across all gaze states, preventing shifts when a direction changes.
 
-Tracking uses pointer position relative to the portrait, with at most one scheduled frame per update. It resets on window blur and pointer exit, pauses offscreen, ignores touch pointer movement, and starts disabled for reduced motion. There is a keyboard-accessible pause/enable control. Listeners, observers, and scheduled frames clean up on navigation.
+Tracking uses pointer position relative to the portrait, with at most one scheduled frame per update. It resets on window blur and pointer exit, pauses offscreen, ignores touch pointer movement, and starts disabled for reduced motion. After two seconds without pointer movement, the eyes return to a straight gaze. No manual tracking control is displayed. Listeners, observers, and scheduled frames clean up on navigation.
 
 ## Design and performance
 

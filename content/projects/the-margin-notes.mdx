@@ -28,9 +28,9 @@ Only the navigation state and portrait need client-side behavior. The lists, art
 
 ## Making eye contact
 
-The pointer is measured relative to the portrait, then mapped to one of eight directional eye frames. A neutral frame appears when tracking is paused; a cross-eyed frame adds a small interaction near the nose. Each eye uses its own fixed placement box, with size and inter-eye spacing configured independently.
+The pointer is measured relative to the portrait, then mapped to one of eight directional eye frames. A neutral frame appears after two seconds of pointer inactivity; a cross-eyed frame adds a small interaction near the nose. Each eye uses its own fixed placement box, with size and inter-eye spacing configured independently.
 
-Frames are scheduled only when the pointer or layout changes. The portrait resets when the pointer leaves the window, and tracking pauses offscreen. A keyboard-accessible control pauses the interaction. Reduced-motion preferences disable it by default.
+Frames are scheduled only when the pointer or layout changes. The portrait resets when the pointer leaves the window, and tracking pauses offscreen. The eyes return to neutral after two seconds without pointer movement. Reduced-motion preferences disable tracking.
 
 ## Trade-offs
 
