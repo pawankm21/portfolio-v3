@@ -1,7 +1,7 @@
 // Source: the resume supplied by Pawan. Keep professional details here, not in layouts.
 export const profile = {
   name: 'Pawan', fullName: 'Pawan Mishra',
-  description: 'Pawan Mishra is a software engineer working on backend systems, distributed data pipelines, and AI-powered applications. Serious about systems. Curious about everything else.',
+  description: 'Pawan Mishra is a software engineer working on backend systems, distributed data pipelines, and AI-powered applications. Based in India, with a love for thoughtful software design and reliable systems.',
   email: 'pawan994567@gmail.com',
   links: [
     { label: 'GitHub', href: 'https://github.com/pawankm21' },
@@ -9,9 +9,13 @@ export const profile = {
     { label: 'LeetCode', href: 'https://leetcode.com/u/castrocee/' },
   ],
   experience: [
-    { company: 'Goldman Sachs', role: 'Software Engineer Analyst', period: 'JUL 2025 — PRESENT' },
-    { company: 'Informatica', role: 'Software Engineer', period: 'JAN 2025 — JUN 2025' },
-    { company: 'Informatica', role: 'Associate Software Engineer', period: 'JUN 2023 — JAN 2025' },
+    { company: 'Goldman Sachs', period: 'JUL 2025 — PRESENT', logo: '/logos/goldman-sachs.svg', logoClass: 'logo-goldman', logoWidth: 58,
+      roles: [{ title: 'Software Engineer Analyst', period: 'JUL 2025 — PRESENT' }] },
+    { company: 'Informatica', period: 'JUN 2023 — JUN 2025', logo: '/logos/informatica.svg', logoClass: 'logo-informatica', logoWidth: 32,
+      roles: [
+        { title: 'Software Engineer', period: 'JAN 2025 — JUN 2025' },
+        { title: 'Associate Software Engineer', period: 'JUN 2023 — JAN 2025' },
+      ] },
   ],
 };
 export const topics = [

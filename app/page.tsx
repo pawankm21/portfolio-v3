@@ -7,15 +7,20 @@ export default function Home() {
   const projects = getEntries('projects');
   const notes = getEntries('writing');
   return <>
-    <section className="hero page-width" aria-labelledby="intro"><div className="eyebrow"><span className="dot" /> SOFTWARE ENGINEER & CURIOUS HUMAN</div><h1 id="intro">Serious about systems.<br /><em>Curious</em> about<br />everything else<span className="period">.</span></h1><div className="hero-bottom"><p>I build backend systems, data pipelines, and<br className="desktop-break" /> AI-powered applications. I also take detours.<br className="desktop-break" /> They tend to be the interesting part.</p><a className="text-link" href="#experience">A little about my work <span aria-hidden="true">↓</span></a></div><Portrait /><details className="margin-note"><summary><span>01</span> a small footnote <span className="disclosure" aria-hidden="true" /></summary><p>“Everything else” currently includes electronics, running, dancing, and occasionally figuring out dinner.</p></details><div className="hero-footer"><span>ENGINEERING, WITH ROOM FOR THE REST.</span><a href="#experience">SCROLL TO WANDER ↓</a></div></section>
+    <section className="hero hero-identity page-width" aria-labelledby="intro"><div className="eyebrow"><span className="dot" /> Hi, I am</div><h1 id="intro"><span className="hero-name">Pawan Mishra<span className="period">,</span></span><em className="hero-role">Software Engineer<span className="period">.</span></em></h1><div className="hero-bottom"><p>Based in India. I care about thoughtful software design and building reliable systems. Welcome to my corner of the web.</p><a className="text-link" href="#experience">A little about my work <span aria-hidden="true">↓</span></a></div><Portrait /><details className="margin-note"><summary><span>01</span> a small footnote <span className="disclosure" aria-hidden="true" /></summary><p>Outside work, you’ll find me exploring electronics, running, dancing, and occasionally figuring out dinner.</p></details><div className="hero-footer"><span>ENGINEERING, WITH ROOM FOR THE REST.</span><a href="#experience">SCROLL TO WANDER ↓</a></div></section>
     <section className="section page-width experience-section" id="experience" aria-labelledby="experience-title">
       <div className="section-label">01 / EXPERIENCE</div>
       <div className="section-content">
         <h2 id="experience-title">A few stops<br /><em>along the way.</em></h2>
         <ol className="career-timeline" aria-label="Career timeline, most recent first">
-          {profile.experience.map(role => <li className="career-stop" key={`${role.company}-${role.role}`}>
-            <span className="career-period">{role.period}</span>
-            <div className="career-position"><h3>{role.company}</h3><p>{role.role}</p></div>
+          {profile.experience.map(company => <li className="career-stop" key={company.company}>
+            <span className="career-period">{company.period}</span>
+            <div className="career-position">
+              <div className="career-company"><span className="company-logo-slot"><img className={`company-logo ${company.logoClass}`} src={company.logo} width={company.logoWidth} height="32" alt="" /></span><h3>{company.company}</h3></div>
+              <ol className="career-roles" aria-label={`Positions at ${company.company}`}>
+                {company.roles.map(role => <li key={role.title}><p>{role.title}</p>{company.roles.length > 1 && <span className="role-period">{role.period}</span>}</li>)}
+              </ol>
+            </div>
           </li>)}
         </ol>
       </div>
