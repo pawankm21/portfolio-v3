@@ -32,7 +32,7 @@ Each MDX file needs `title`, `summary`, `topic`, and an explicit `published: tru
 
 Content is trusted, repository-owned MDX. Do not accept untrusted user-authored MDX: it compiles to executable code. Drafts never generate routes. Set `published: true` and rebuild to publish a note; the writing page and homepage pick it up automatically. Cross-links resolve only published content.
 
-The professional project pages are high-level resume summaries. Add richer architecture, trade-offs, and lessons only when they are accurate and suitable to share.
+Company mentions are limited to names, positions, and dates in the experience timeline. Project pages cover personal and earlier work.
 
 ## Replace the portrait
 

@@ -9,9 +9,9 @@ export const profile = {
     { label: 'LeetCode', href: 'https://leetcode.com/u/castrocee/' },
   ],
   experience: [
-    { company: 'Goldman Sachs', role: 'Software Engineer Analyst', period: 'JUL 2025 — PRESENT', description: 'Building compliance surveillance platforms and migrating data pipelines to Spark, Snowflake, and AWS Glue.', detail: 'Pipeline enhancements and cloud migration reduced false positives by 90% and improved surveillance job runtime by 14×.', tags: ['Distributed systems', 'Spark', 'AWS Glue', 'Snowflake'] },
-    { company: 'Informatica', role: 'Software Engineer', period: 'JAN 2025 — JUN 2025', description: 'Owned full-stack development of For’CE, a log-analysis copilot built with Spring Boot, React, and Azure OpenAI.', detail: 'Worked on log aggregation microservices, an MCP server for model integration, and backward-compatible OpenSearch index migrations.', tags: ['AI applications', 'Spring Boot', 'Azure OpenAI', 'OpenSearch'] },
-    { company: 'Informatica', role: 'Associate Software Engineer', period: 'JUN 2023 — JAN 2025', description: 'Built a reusable React component library and automated deployments for the log analyzer application.', detail: 'The component library accelerated UI development velocity by 40%. Deployment pipelines used Jenkins and Ansible.', tags: ['React', 'CI/CD', 'Jenkins', 'Ansible'] },
+    { company: 'Goldman Sachs', role: 'Software Engineer Analyst', period: 'JUL 2025 — PRESENT' },
+    { company: 'Informatica', role: 'Software Engineer', period: 'JAN 2025 — JUN 2025' },
+    { company: 'Informatica', role: 'Associate Software Engineer', period: 'JUN 2023 — JAN 2025' },
   ],
 };
 export const topics = [
