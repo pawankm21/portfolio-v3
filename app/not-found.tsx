@@ -1,0 +1,2 @@
+import Link from 'next/link';
+export default function NotFound() { return <section className="page-width page-intro not-found"><div className="eyebrow">404 / A SMALL DETOUR</div><h1>This margin<br /><em>is still blank.</em></h1><p className="lede">That page isn’t here. There are a few other paths worth taking.</p><Link className="text-link" href="/">Back home <span aria-hidden="true">↗</span></Link></section>; }

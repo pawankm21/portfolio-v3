@@ -1,0 +1,43 @@
+---
+title: "The Margin Notes"
+summary: "A personal portfolio with an editorial sensibility, a little wit, and a portrait that keeps an eye on things."
+topic: "Web & interaction design"
+status: "in-progress"
+published: true
+featured: true
+date: "2026-11-14"
+related: []
+---
+A portfolio is a small system with a surprisingly tricky brief: make the work easy to understand, and leave room for the person behind it.
+
+This site is the current experiment. The visual direction pairs editorial typography and generous space with handwritten margin notes and a cursor-following portrait.
+
+## The constraints
+
+The site has three primary pages: Home, Projects, and Writing. It should work with a small amount of real content, stay readable on a phone, and make professional experience easy to find.
+
+The portrait is currently a placeholder illustration. It is not a likeness; the face asset and eye layer are separate so personal artwork can replace it later.
+
+## A deliberately small architecture
+
+Next.js App Router renders the pages. TypeScript defines the content shape. Project case studies and writing live in MDX files, separate from their layouts. A static export keeps deployment simple.
+
+<Architecture />
+
+Only the navigation state and portrait need client-side behavior. The lists, article content, and page layouts render without requiring a client content system.
+
+## Making eye contact
+
+Each pupil measures the pointer relative to its own eye center. Its movement is constrained to an ellipse and clipped to its socket. A short interpolation lets it settle into position rather than snapping on every pointer event.
+
+Animation frames stop when the eyes settle. The portrait resets when the pointer leaves the window, and tracking is paused when it is offscreen. A keyboard-accessible control pauses the interaction. Reduced-motion preferences disable it by default.
+
+## Trade-offs
+
+SVG pupils provide continuous movement with a small asset footprint. A directional sprite sheet could better match pixel artwork, but would require aligning and maintaining separate gaze frames. The current layered structure leaves that option open.
+
+The site's limited content is visible rather than disguised. There are no fabricated client projects or invented performance numbers.
+
+## What is still evolving
+
+Personal portrait assets, detailed career history, and published engineering notes will make this more personal. Accessibility and layout checks are part of implementation; this page makes no claim about measured production performance yet.

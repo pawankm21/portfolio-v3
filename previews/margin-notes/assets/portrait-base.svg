@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 340" fill="none">
+<!-- Placeholder only. Replace with a portrait without eyes, keeping the same viewBox. -->
+<ellipse cx="160" cy="181" rx="134" ry="146" fill="#e2e5d8"/>
+<path d="M48 319c4-54 34-71 74-79h76c40 8 70 25 74 79" fill="#bc634b" stroke="#242522" stroke-width="2"/>
+<path d="m130 221-4 30c14 17 51 18 67 0l-5-30" fill="#e8bf98" stroke="#242522" stroke-width="2"/>
+<path d="m115 246 17 26 27-14 28 14 18-26M159 259v60" stroke="#242522" stroke-width="2"/>
+<path d="M99 148c-24-16-30 28-6 36l10-1m116-35c24-16 30 28 6 36l-10-1" fill="#e8bf98" stroke="#242522" stroke-width="2"/>
+<path d="M97 126c-2-56 128-56 126 0l-6 67c-3 39-33 60-57 60s-54-21-57-60z" fill="#edcba8" stroke="#242522" stroke-width="2"/>
+<path d="M95 158c-13-23-16-51-2-68-10-21 12-41 30-34 10-24 36-24 48-13 20-16 45-5 47 13 25-1 38 25 26 40 11 22-2 47-21 61l-3-49c-27 12-55-1-63-15-8 17-36 27-55 21z" fill="#30332d" stroke="#242522" stroke-width="2"/>
+<path d="M112 140q13-8 27-2m42 0q14-6 27 2" stroke="#30332d" stroke-width="4" stroke-linecap="round"/>
+<path d="m159 161-6 28q7 5 16 0" stroke="#9b7052" stroke-width="2" stroke-linecap="round"/>
+<path d="M137 211q23 17 46-1" stroke="#242522" stroke-width="2.5" stroke-linecap="round"/>
+<path d="M145 225q15 5 30-1" stroke="#bc8e6c" stroke-width="1.5" stroke-linecap="round"/>
+<path d="m70 109 3-11m-9 5 15 1M248 224l4-13m-10 5 16 3" stroke="#b94b36" stroke-width="1.5" stroke-linecap="round"/>
+</svg>
