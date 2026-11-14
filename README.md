@@ -79,3 +79,9 @@ Set `NEXT_PUBLIC_SITE_URL` to the final custom-domain origin. This sets metadata
 ### Alternative: Cloudflare Pages
 
 Connect this repository as a Pages project using the Next.js (Static HTML Export) preset, build command `npm run build`, and output directory `out`. Pages does not use a Wrangler deploy command. Associate custom domains through the Pages project's Custom domains settings.
+
+## Final eye calibration
+
+The chosen settings are baked into `eyeCalibration` in `components/portrait.tsx`: width **206**, height **151**, center-to-center distance **244**. The existing vertical alignment and one-unit left/right height adjustments are preserved to match the approved preview. Temporary controls and browser-storage overrides have been removed.
+
+The electronics object uses the same disclosure interaction as the book, laptop, camera, and shoes. Travel photos are local files in `public/photos/`, lazy-loaded in the personal section. They have not been uploaded or deployed.

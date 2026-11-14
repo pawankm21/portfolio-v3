@@ -8,10 +8,15 @@ const artwork = { src: '/portrait/pawan.png', width: 1199, height: 1312 };
 const frames = ['right', 'downright', 'down', 'downleft', 'left', 'upperleft', 'up', 'upperright', 'straight', 'towards'] as const;
 type Gaze = typeof frames[number];
 const centerFrame: Gaze = 'straight';
-const eyes = [
-  { side: 'left', x: 366, y: 464, width: 208, height: 136 },
-  { side: 'right', x: 610, y: 468, width: 208, height: 134},
-] as const;
+// Final values chosen with the live calibration controls.
+const eyeCalibration = { width: 206, height: 151, distance: 244 };
+const eyes = [{ side: 'left', y: 464 }, { side: 'right', y: 468 }].map((eye, index) => ({
+  ...eye,
+  width: eyeCalibration.width,
+  height: eyeCalibration.height + (index === 0 ? 1 : -1),
+  x: 592 + (index === 0 ? -1 : 1) * eyeCalibration.distance / 2 - eyeCalibration.width / 2,
+  y: eye.y + (135 - eyeCalibration.height) * 0.65,
+}));
 export function Portrait() {
   const container = useRef<HTMLDivElement>(null);
   const stage = useRef<HTMLDivElement>(null);

@@ -82,3 +82,23 @@
 @media(min-width:701px){.object-laptop{right:-10%}.object-shoes{right:-18%}}
 
 .portrait-objects[data-motion-paused="true"] .floating-object{animation-play-state:paused}
+
+.object-electronics{left:38%;top:-18%;animation-delay:-2.3s}
+
+
+
+
+
+
+.outside-photos{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;padding:20px 0 30px;margin:35px 0 20px}
+.travel-photo{margin:0;min-width:0}.travel-photo-2{padding-top:30px}.travel-photo-3{padding-top:12px}
+.travel-photo>a{position:relative;display:block;background:#e2e5d8;overflow:hidden}.travel-photo img{display:block;width:100%;height:auto;aspect-ratio:3/4;object-fit:cover;transition:transform .35s ease}.travel-photo a:hover img{transform:scale(1.035)}
+.photo-expand{position:absolute;bottom:8px;right:8px;background:var(--paper);width:25px;height:25px;display:grid;place-items:center;color:var(--ink);font-size:13px}
+.travel-photo figcaption{margin-top:15px}.travel-photo figcaption>span{font-size:7px;letter-spacing:1.2px;color:var(--muted)}.travel-photo figcaption p{font-family:Caveat,cursive;font-size:23px;line-height:1.15;margin-top:7px;color:var(--red)}
+@media(max-width:700px){.object-electronics{top:-15%;left:39%}.outside-photos{grid-template-columns:1fr;gap:32px;margin-top:25px}.travel-photo-2,.travel-photo-3{padding-top:0}.travel-photo img{aspect-ratio:4/3}.travel-photo-1 img{aspect-ratio:3/4}.travel-photo figcaption>span{font-size:8px}.travel-photo figcaption p{font-size:25px}}
+
+
+/* Softly raised photo prints, with the rounded edge clipping the image. */
+.travel-photo>a{border-radius:14px;box-shadow:0 4px 8px rgba(36,37,34,.06),0 16px 28px -10px rgba(36,37,34,.25);transition:transform .25s ease,box-shadow .25s ease}
+.travel-photo>a:hover,.travel-photo>a:focus-visible{transform:translateY(-4px);box-shadow:0 6px 12px rgba(36,37,34,.08),0 22px 34px -12px rgba(36,37,34,.3)}
+@media(prefers-reduced-motion:reduce){.travel-photo>a:hover,.travel-photo>a:focus-visible{transform:none}}
