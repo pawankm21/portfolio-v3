@@ -4,7 +4,8 @@ import { parseEntry, getEntries, getEntry, getRelated } from '../lib/content.ts'
 const valid = '---\ntitle: "An actual experiment"\nsummary: "A clear summary"\ntopic: "Systems"\npublished: true\n---\nActual content.';
 test('only explicitly published entries appear in collections and details', () => {
   assert.ok(getEntries('projects').length >= 1);
-  assert.equal(getEntries('writing').length, 0);
+  assert.ok(getEntries('writing').every(entry => entry.published));
+  assert.ok(getEntry('writing', 'google-docs-system-design'));
   assert.equal(getEntry('writing', 'first-note'), undefined);
   assert.equal(parseEntry(valid.replace('published: true', 'published: "true"'), 'example', 'writing').published, false);
 });

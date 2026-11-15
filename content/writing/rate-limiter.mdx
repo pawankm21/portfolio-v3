@@ -1,0 +1,255 @@
+---
+title: "Rate limiter system design: token buckets and shared state"
+summary: "From a simple request counter to a Redis-backed gateway: choosing identities, allowing bursts, handling concurrent requests, and deciding what happens when the limiter fails."
+topic: "System design · Distributed systems"
+status: "note"
+published: true
+featured: true
+date: "2026-11-15"
+related: []
+---
+A rate limiter sounds like a counter with a timer. Allow 100 requests in a minute, reject request 101, reset, repeat.
+
+Then we add a second gateway instance. The same user can now reach two counters. Two requests arrive together, both see one token left, and both get through. Redis becomes unavailable. Should the entire API stop working?
+
+These are the questions I wanted to work through. The algorithm matters, but so do the identity we count against, where we keep state, and how much imprecision the product can tolerate.
+
+This is a design exercise for a public API, with a [Spring-based implementation](https://github.com/pawankm21/rate-limiter) alongside it. The scale targets below are assumptions for the exercise, not benchmark results.
+
+## What are we limiting?
+
+For this design, I’m limiting incoming API requests per client over time. The goals are to protect downstream services, discourage abuse, and give clients a fair share of capacity.
+
+There are related controls that solve different problems:
+
+| Control | What it measures | Example policy |
+| --- | --- | --- |
+| Request rate | Requests over time | 100 requests per minute per user |
+| Concurrency | Requests still in progress | At most 20 active requests per client |
+| Bandwidth | Bytes over time | 10 MB per second per client |
+| Payload size | Bytes in one request | At most 100 KB per request |
+
+A slow endpoint can exhaust its workers even when its request rate looks reasonable. That is where a concurrency limit helps. Stripe’s engineering write-up describes using both [request-rate and concurrent-request limiters](https://stripe.com/blog/rate-limiters).
+
+I would also keep this separate from a billing quota. “100 requests per minute” protects a service over a short interval. “One million paid operations this month” needs durable accounting and a clear definition of what counts as billable work.
+
+Client-side throttling can improve the experience, but enforcement belongs on the server. A caller can bypass a client-side check.
+
+## Define the requirements
+
+The functional requirements are straightforward:
+
+- Identify the client using a trusted user ID, API-key identity, or another configured dimension.
+- Apply configurable policies per client, tenant, or endpoint.
+- Allow requests with available capacity and reject requests that exceed it.
+- Explain a rejection and provide useful retry guidance.
+
+For the design exercise, I’ll use a peak target of **one million requests per second** and an **added decision latency below 10 ms at p99**. Both need validation under realistic traffic, including hot clients and dependency failures. A user count alone does not tell us peak request rate.
+
+My default preference is to keep ordinary API traffic available during a limiter failure, with bounded local protection. I would revisit that choice for login attempts, expensive operations, or other endpoints where letting requests through carries a higher cost.
+
+“Availability over consistency” is too broad to settle that decision for every route.
+
+## Choose the identity before the algorithm
+
+If a user can create five API keys, five independent key-level buckets may give them five times the intended allowance. If the policy is per account, the bucket needs to resolve to that account.
+
+I would start with authenticated user or tenant identity for product limits. An API-key identifier works when the allowance intentionally belongs to that key. IP limits are useful as an additional abuse control, especially before authentication, but shared networks can put many legitimate users behind one address.
+
+The gateway must derive identity from trusted authentication context. A caller-supplied `X-Client-Id` header is convenient for a local demo; it is not a production identity boundary. Forwarded IP headers also need a trusted proxy configuration.
+
+A bucket key might look like this:
+
+```text
+rate-limit:search-v2:tenant-42:user-17
+```
+
+The policy version makes changes explicit. I would use internal identifiers rather than putting raw API secrets into Redis keys or logs.
+
+## Where should the limiter live?
+
+There are three useful starting points:
+
+| Placement | Why I would choose it | Main limitation |
+| --- | --- | --- |
+| Inside each service | Simple local protection with business context | Independent process state does not enforce a shared quota |
+| In the API gateway | Reject early and apply common route policies | Requires trusted identity and a shared state strategy across instances |
+| Separate decision service | Centralize complex policies across callers | Adds a network dependency and another service to operate |
+
+For this exercise, I would put enforcement in the API gateway and keep bucket state in Redis. A gateway can apply endpoint-specific policies when it has route and identity information. Services can still enforce additional limits around expensive internal work.
+
+<figure className="article-diagram">
+  <img src="/writing/rate-limiter/architecture.png" alt="Original design sketch showing clients reaching API gateway instances, gateway rate limiters consulting shared Redis state, and allowed requests reaching downstream services." loading="lazy" width="1268" height="980" />
+  <figcaption>My original gateway-and-Redis sketch. The green response illustrates an allowed request; its actual HTTP status comes from the downstream service. The transaction note is unpacked below: the whole read-and-decide operation needs protection.</figcaption>
+</figure>
+
+The request path becomes:
+
+1. Authenticate the request and resolve its limiting identity.
+2. Find the policies for that client and route.
+3. Ask the shared store to make an atomic decision.
+4. Forward an allowed request, or return a rate-limit response.
+
+An “allow” decision does not guarantee `200 OK`. The downstream service can still return a validation error, a missing resource, or another response.
+
+## Compare the algorithms
+
+### Fixed window
+
+Count requests in a named interval, such as a particular minute. Increment the counter and reject once it exceeds the limit.
+
+This is easy to reason about and needs little state. The awkward case is the boundary: 100 requests just before one minute ends and another 100 just after the next begins can produce 200 requests in a short burst.
+
+That may be acceptable for a coarse quota. It is less useful when the purpose is to smooth pressure on a downstream service.
+
+### Sliding window log
+
+Keep timestamps of requests counted toward the quota. Remove entries outside the trailing interval, then check how many remain.
+
+This can enforce an exact trailing-window count when updates are atomic and the timestamp policy is consistent. The cost is storing and cleaning up individual events. Busy clients need more state than a counter or token bucket.
+
+A sliding-window counter trades some precision for lower storage by weighting adjacent time buckets. I would choose it only after deciding that approximation is acceptable.
+
+### Token bucket
+
+A bucket holds up to **B tokens** and refills at **r tokens per second**. Each request spends tokens. An empty bucket rejects requests until enough tokens return.
+
+This separates two things I care about: the sustained rate and the burst allowance. I would start here for this API because short bursts are useful, while unlimited sustained traffic is not.
+
+A token bucket is not an exact “N requests in every rolling minute” rule. Starting full, it can admit a burst plus tokens earned during the interval. The policy wording should match that behavior.
+
+## Work through one bucket
+
+Suppose capacity is 10 tokens, refill rate is 2 tokens per second, and each request costs one token.
+
+| Event | Available tokens | Decision |
+| --- | --- | --- |
+| Start with a full bucket | 10 | Ready |
+| Eight requests arrive together | 2 after processing | All eight allowed |
+| Three more arrive immediately | 0 after two are accepted | Third request rejected |
+| Wait half a second | 1 | One request can now pass |
+| Leave the bucket idle for ten seconds | 10 | Refill stops at capacity |
+
+We do not need a background timer for every client. Refill can be calculated lazily when a request arrives.
+
+```text
+# One atomic operation for one bucket.
+# Preconditions: capacity > 0, refillRate > 0,
+#                0 < requestCost <= capacity.
+
+state = read(bucketKey)
+if state is missing:
+    state = { tokens: capacity, lastRefill: now }
+
+effectiveNow = max(now, state.lastRefill)
+elapsedSeconds = (effectiveNow - state.lastRefill) / 1000
+available = min(capacity, state.tokens + elapsedSeconds * refillRate)
+allowed = available >= requestCost
+remaining = available - requestCost if allowed else available
+retryAfterSeconds = 0 if allowed else (requestCost - available) / refillRate
+
+write(bucketKey, { tokens: remaining, lastRefill: effectiveNow })
+expireAfter(bucketKey, ceil(capacity / refillRate) + safetyMarginSeconds)
+return { allowed, remaining, retryAfterSeconds }
+```
+
+Here timestamps use milliseconds and the refill rate uses tokens per second. Keeping the units explicit avoids a surprisingly easy thousand-fold mistake.
+
+The expiry is long enough for an idle bucket to become full before its state disappears. Recreating it full then preserves the intended behavior, assuming the policy has not changed. Requests whose cost exceeds capacity should be rejected as an invalid policy combination rather than given an impossible retry time.
+
+I would use a consistent, trusted time source for shared decisions. Clamping elapsed time prevents negative refill when a clock moves backward; it does not solve forward clock jumps or skew between machines.
+
+## Make the decision atomic
+
+Suppose a bucket has one token left. Gateway A reads one. Gateway B also reads one. Both allow their requests and write zero.
+
+Each write can be individually atomic while the overall decision is still wrong.
+
+The transaction in my sketch groups writes, but a plain `MULTI`/`EXEC` around those writes does not protect a read that happened earlier. A watched transaction with retries is one option. For this design, I would use a short Lua script that reads, refills, checks, and updates the bucket in one operation. Redis documents this [atomic read-decide-update pattern](https://redis.io/docs/latest/develop/use-cases/rate-limiter/).
+
+The script should read named fields explicitly, initialize a new bucket deliberately, and set an expiry. It should also stay small: a long-running script delays other work on that Redis server.
+
+Atomic execution is not the same as durable, globally exact accounting. Failover or lost state can restore capacity earlier than intended. That is another reason I would not use this transient bucket as the billing ledger.
+
+## Apply several policies together
+
+A request may need to satisfy more than one rule:
+
+- Per user: 1,000 requests per hour.
+- Per IP: 100 requests per minute.
+- Search endpoint: 10 requests per minute per user.
+- Service-wide protection: 50,000 requests per second.
+
+These are illustrative policies, not measured capacity recommendations. The request must pass every applicable check. We cannot identify the strictest rule just by comparing the numbers; the identities and time intervals differ.
+
+There is also a charging question. If a user-level check spends a token and an endpoint-level check rejects the request, should that first token remain spent?
+
+I would explicitly document whether each layer counts attempts or only admitted requests. All-or-nothing consumption across several buckets needs coordination. In Redis Cluster, a multi-key script requires its keys to share a hash slot; user, IP, and global buckets do not naturally share one. Separate layers can be simpler, provided their behavior is intentional.
+
+## Return useful rejection details
+
+A boolean is enough to demonstrate the algorithm. The gateway needs a richer result:
+
+```text
+check(identity, policy, cost) -> {
+    allowed,
+    policyId,
+    remaining,
+    retryAfterSeconds
+}
+```
+
+For a quota rejection, I would return something like:
+
+```http
+HTTP/1.1 429 Too Many Requests
+Content-Type: application/json
+Retry-After: 1
+Cache-Control: no-store
+
+{"error":"rate_limit_exceeded","message":"Too many search requests. Try again shortly."}
+```
+
+[HTTP 429 permits a `Retry-After` header](https://www.rfc-editor.org/rfc/rfc6585#section-4). For the numeric form shown here, I would round the calculated delay up to whole seconds. With multiple policies, retry guidance needs to account for all blocking policies; it cannot reserve future capacity against competing requests.
+
+Headers such as `X-RateLimit-Remaining` can be part of a documented API contract, but I would not present those names as a universal standard. For token buckets, “time until one request is possible” and “time until the bucket is full” also mean different things.
+
+Clients should back off with jitter rather than retry together the instant a shared delay ends.
+
+## Scale and failure decisions
+
+At one million incoming requests per second, one shared-store call per request means roughly one million decision operations per second. Multiple policies can increase the work. I would measure script latency, memory per active bucket, key expiry, connection pressure, and uneven traffic before choosing shard counts.
+
+Hashing bucket identities distributes ordinary clients. A single global bucket remains a hot key. Regional budgets or small token allocations leased to gateways can reduce coordination, but they introduce decisions about unused capacity, outstanding allocations, and acceptable overshoot.
+
+For Redis failures, I would configure behavior per route:
+
+| Choice | Behavior | Trade-off |
+| --- | --- | --- |
+| Fail open | Continue admitting requests | Preserves access but weakens protection |
+| Fail closed | Refuse requests while checks are unavailable | Protects the operation but makes the limiter a hard dependency |
+| Local fallback | Apply a conservative per-instance limit | Retains some protection, with an allowance that varies across instances |
+
+A dependency failure should be distinguishable from a confirmed quota rejection. I would normally use an availability error such as `503` when the decision cannot be made, rather than claiming the caller has exhausted a quota.
+
+The checks I would prioritize are simultaneous requests against the last token, independent clients, exact refill boundaries, policy changes, expiry, clock anomalies, and Redis outages. At runtime I would watch decision latency, rejections by policy, fallback use, store errors, and downstream saturation. A low rejection rate means little if the protected service is still overloaded.
+
+## Connect the design to the implementation
+
+My [rate-limiter repository](https://github.com/pawankm21/rate-limiter) explores custom algorithms alongside Spring Cloud Gateway’s Redis-backed limiter. The README describes an in-memory custom implementation and the changes needed for distributed state; these are separate from selecting the gateway’s built-in Redis strategy.
+
+Spring Cloud Gateway’s [Redis limiter uses a token bucket](https://docs.spring.io/spring-cloud-gateway/reference/spring-cloud-gateway-server-webflux/gatewayfilter-factories/requestratelimiter-factory.html), with configuration for refill rate, bucket capacity, request cost, and identity resolution. That gives me a useful baseline to compare against the custom version.
+
+The repository’s local simulation describes a ten-token bucket refilling at one token per second. A sufficiently fast burst should exhaust its initial capacity; slower requests can receive newly refilled tokens along the way. The demo identity header should be replaced with authenticated context before production use.
+
+For a first distributed version, I would keep the design narrow: gateway enforcement, trusted identities, shared token buckets, short atomic updates, explicit timeouts, and route-specific failure behavior. I would add more coordination only when measurements or a stricter product requirement justify it.
+
+The question I keep coming back to is: **what promise are we actually making to the client?** Once that is clear, choosing a counter, a window, or a bucket becomes much easier.
+
+## References
+
+- [Implementation and local simulation — my rate-limiter repository](https://github.com/pawankm21/rate-limiter)
+- [Scaling your API with rate limiters — Stripe Engineering](https://stripe.com/blog/rate-limiters)
+- [Redis rate limiter — Redis documentation](https://redis.io/docs/latest/develop/use-cases/rate-limiter/)
+- [RequestRateLimiter GatewayFilter — Spring Cloud Gateway](https://docs.spring.io/spring-cloud-gateway/reference/spring-cloud-gateway-server-webflux/gatewayfilter-factories/requestratelimiter-factory.html)
+- [HTTP 429 Too Many Requests — RFC 6585, section 4](https://www.rfc-editor.org/rfc/rfc6585#section-4)

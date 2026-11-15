@@ -1,0 +1,254 @@
+---
+title: "Google Docs system design: concurrent edits and offline sync"
+summary: "Working through concurrent edits, offline sync, and the trade-offs between operational transformation, CRDTs, and differential synchronization."
+topic: "System design · Distributed systems"
+status: "note"
+published: true
+featured: true
+date: "2026-11-15"
+related: []
+---
+A document editor looks simple until two people type in the same place.
+
+One person inserts a word. Another deletes the sentence around it. Someone else has been editing offline for twenty minutes. When they reconnect, whose version do we keep?
+
+That is the question I wanted to work through in these notes:
+
+> How do we resolve concurrent changes to the same document without losing the work people intended to do?
+
+I’m using a Google Docs-style editor as the design exercise. The same questions come up in whiteboards, design tools, and shared workspaces, although their data models can lead to different answers. This is a proposed design, not a description of Google’s current internal architecture.
+
+## Define the requirements first
+
+Before choosing a synchronization algorithm, I would clarify what we are building.
+
+### Functional requirements
+
+- Create, read, update, and delete documents.
+- Let multiple people edit the same document concurrently.
+- Show other users’ edits in near real time.
+- Display collaborator cursors and selections.
+- Allow offline editing and reconcile changes after reconnecting.
+
+Cursor positions help people understand what others are doing. They do not prevent conflicting edits; the synchronization model still has to handle those.
+
+### Scale and behavior
+
+For this exercise, I’m assuming millions of documents, up to **100 concurrent editors per document**, and a target of **roughly 200 ms for a remote edit to become visible** under normal conditions. Those are design targets, not measured Google Docs numbers.
+
+Local typing should feel immediate. A network round trip must not sit between a keystroke and the character appearing on screen.
+
+My original shorthand was “availability over consistency.” A more useful requirement is: **allow local work while disconnected, then converge after updates are exchanged**. That does not mean every part of the system can be eventually consistent. Permissions and durable-save acknowledgements need their own rules.
+
+## Start with the document model and API
+
+The core entities are a **User** and a **Document**. Collaboration adds a few more concepts:
+
+- **Membership:** who may read or edit a document.
+- **Session:** an active connection, separate from the user’s identity.
+- **Update:** an identifiable editing change that can be retried safely.
+- **Snapshot:** a recoverable checkpoint of document state.
+
+I would use HTTP endpoints for document management and a persistent connection for collaboration:
+
+```http
+POST   /v1/documents
+GET    /v1/documents/{document_id}
+PATCH  /v1/documents/{document_id}
+DELETE /v1/documents/{document_id}
+
+WS     /v1/documents/{document_id}/collaborate
+```
+
+The `PATCH` endpoint can handle metadata such as the title. Editing the body happens through the collaboration protocol, rather than replacing the entire document on every keystroke.
+
+A session ID is not proof of authorization. The server authenticates the connection, checks document access, and validates incoming changes.
+
+I would not make a transport choice based on an assumption that “Google uses QUIC instead of REST or WebSockets.” Those are different layers and responsibilities. For this design, HTTP plus WebSockets is a clear starting point; it does not determine how edits are merged.
+
+## Send edits, not the whole document every time
+
+My first question here was: should the client send its whole copy of the document?
+
+For initial loading and recovery, a snapshot is useful. During an active session, continuously replacing the document makes it easy for a stale client to overwrite someone else’s work.
+
+Small updates are a better fit. However, sending “insert this character at position 5” is not enough on its own. Position 5 may refer to different text on two clients.
+
+Consider a smaller example. Alice and Bob both start with:
+
+```text
+CAT
+```
+
+Alice inserts `O` after `C`, producing `COAT`. Bob deletes `T`, producing `CA`.
+
+We want the edits to combine into `COA`. If we apply Bob’s original positional deletion directly to `COAT`, position 2 now contains `A`. We would delete the wrong character.
+
+The interesting part is how each synchronization strategy avoids that mistake.
+
+## Operational transformation: adjust the coordinates
+
+In an OT design, operations carry the revision they were based on. A central collaboration service can order accepted operations and transform stale ones against changes they have not seen.
+
+Using zero-based positions:
+
+```text
+Alice: insert(1, "O"), based on revision 0
+Bob:   delete(2),      based on revision 0
+
+Server accepts Alice's insertion:
+CAT → COAT                  revision 1
+
+Bob's deletion is transformed:
+delete(2) → delete(3)
+
+Server applies the transformed deletion:
+COAT → COA                  revision 2
+```
+
+That is only one transformation case. Concurrent insertions at the same position need a consistent ordering rule. Insert/delete and overlapping delete/delete operations need their own treatment too. Rich-text formatting and undo add more cases.
+
+The client also has work to do: apply its own edits immediately, track pending and unacknowledged changes, and reconcile incoming edits. Google’s [2010 explanation of its collaboration protocol](https://drive.googleblog.com/2010/09/whats-different-about-new-google-docs.html) is useful for seeing those responsibilities together. It is historical documentation, not a guarantee about the product’s implementation today.
+
+OT is a reasonable choice for a centrally coordinated editor. I would still use a proven implementation rather than assume a few index-shifting rules cover the whole problem.
+
+## CRDTs: identify the thing being edited
+
+A sequence CRDT takes another approach. Instead of referring only to the current array position, it gives elements stable identities and maintains enough ordering information to merge concurrent edits.
+
+Here is a simplified conceptual version of the same example:
+
+```text
+Initial elements:
+C [id: c]   A [id: a]   T [id: t]
+
+Alice: insert O [id: alice-1] between c and a
+Bob:   delete element t
+
+Merged visible sequence:
+C O A
+```
+
+Bob is deleting `t`, not “whatever is at position 2 when this message arrives.” Alice’s insertion therefore does not change the identity of Bob’s target.
+
+Concurrent insertions still need a deterministic ordering rule. CRDTs do not discover what people meant; they define how replicas resolve supported concurrent operations so they can converge. That distinction matters when two changes are individually valid but the combined document is surprising. [CRDT.tech](https://crdt.tech/) gives a useful introduction to optimistic replication and convergence.
+
+### What about deleted characters?
+
+Some sequence CRDTs retain information about deleted elements. If Alice inserts after `X` while Bob deletes `X`, the merge still needs to understand that reference.
+
+This is where tombstones and related metadata enter the discussion. Their storage cost and reclamation rules depend on the algorithm and implementation. “Every CRDT keeps every deleted character forever” is too broad, just as “every CRDT operation is constant time” is too broad.
+
+I would measure the chosen implementation against realistic documents, edit histories, and reconnect scenarios instead of assigning a universal memory or CPU cost to the whole category.
+
+### Why this is appealing for offline work
+
+Offline editing is an explicit requirement here, so a sequence CRDT implementation such as Yjs is worth evaluating early.
+
+[Yjs document updates](https://docs.yjs.dev/api/document-updates) can be applied in different orders and more than once. State vectors let peers determine which updates are missing. That gives us useful synchronization primitives, but we still have to build authentication, persistence, transport, recovery, and the editor integration.
+
+A CRDT removes the requirement for a central ordering authority in the merge algorithm. It does not remove the usefulness of a server in a product.
+
+## Differential synchronization: compare and patch
+
+Differential synchronization is another option when we cannot capture the editor’s operations directly.
+
+In [Neil Fraser’s design](https://neil.fraser.name/writing/sync/), peers maintain shadow state, compute differences, and exchange patches. For the `CAT` example, Alice’s change describes the insertion of `O`; Bob’s describes the removal of `T`. The protocol reconciles those changes using its shadow copies and patching behavior.
+
+This is more than periodically diffing each client against one shared server string. Shadow versions, acknowledgements, and recovery behavior matter. I would not promise that every fuzzy patch preserves intent, but I would not label the entire approach inherently corrupt or unusable either.
+
+It is especially interesting when adding collaboration to a small, existing editor that does not expose granular editing events. For this exercise, I would first investigate OT or a sequence CRDT because I can choose the editor model and integration from the start.
+
+## Compare the trade-offs
+
+| Question | OT | Sequence CRDT | Differential synchronization |
+| --- | --- | --- | --- |
+| What is exchanged? | Operations tied to a revision or editing context | Updates referring to stable identities and ordering metadata | Differences and patches against shadow state |
+| Where does coordination sit? | A central server is a common practical design | The merge algorithm need not depend on a central sequencer | Between peers that maintain corresponding shadow state |
+| What makes offline work difficult? | Reconciling pending edits with retained server history | Managing history, storage, synchronization, and application semantics | Reconnecting divergent copies and handling patches safely |
+| Main implementation burden | Correct transformations plus the collaboration protocol | Choosing and integrating the data structure and persistence model | Shadow bookkeeping, patch behavior, and resynchronization |
+| What would I validate? | Rich-text edits, undo, reconnects, and operation ordering | Convergence, document growth, recovery, and editor behavior | Patch outcomes, divergence, bandwidth, and sync cost |
+
+These are architectural tendencies, not fixed complexity guarantees. Document structure, batching, history retention, and implementation choices can change the costs substantially.
+
+## Figma is a useful comparison, with a different data model
+
+It is tempting to put products into neat “OT” and “CRDT” columns. That hides important details.
+
+Figma’s [published multiplayer design](https://www.figma.com/blog/how-figmas-multiplayer-technology-works/) describes a centralized system inspired by CRDT ideas. Its object-and-property model differs from a plain sequence of characters. Changes to separate properties can be reconciled independently, while concurrent writes to the same property use the server’s ordering.
+
+I would not describe that article as proof that Figma uses a generic peer-to-peer LWW map with client-generated Lamport timestamps. Its actual explanation is more specific, and more useful, than that shortcut.
+
+The question I would carry into an interview is: **what are the independently editable units in our application?** Characters, formatting ranges, shapes, and object properties do not necessarily need the same merge strategy.
+
+## Put the collaboration service between clients and storage
+
+This is the working sketch from my original notes:
+
+<figure className="article-diagram">
+  <a href="/writing/google-docs-system-design/architecture.svg" target="_blank" rel="noopener noreferrer" aria-label="Open the collaborative document architecture diagram in a new tab">
+    <img src="/writing/google-docs-system-design/architecture.svg" width="771" height="600" loading="lazy" alt="Working architecture sketch connecting a local document copy, API gateway and document service, WebSocket collaboration, a message queue, persistent storage, compaction workers, object storage, and a CDN." />
+  </a>
+  <figcaption>My initial architecture sketch. The collaboration protocol sits behind the WebSocket connection; clients do not write directly to the database.</figcaption>
+</figure>
+
+I would divide the responsibilities like this:
+
+1. **The client** keeps local state, renders edits immediately, and retains unsynchronized work across refreshes or disconnections.
+2. **The document service** manages metadata, ownership, permissions, and document discovery.
+3. **The collaboration service** accepts authenticated connections, validates updates, and distributes them to the right document’s participants.
+4. **Durable storage** records accepted updates and recoverable snapshots.
+5. **Background workers** compact history according to the synchronization model’s requirements.
+6. **Object storage** holds large snapshots and attachments. A CDN may help deliver suitable assets, but private document data still needs access controls.
+
+The merge algorithm and storage system are separate decisions. “Writes are frequent, so use Cassandra” is not enough justification. I would first define update size, retention, replay, ordering, and recovery requirements. A durable log may be useful, but the diagram’s queue and database are responsibilities to evaluate, not a mandatory shopping list.
+
+### Walk through one edit
+
+The client applies the edit locally and sends an update with a document ID, session identity, and unique update ID. The service checks access and validates the message before accepting it.
+
+The acknowledgement needs a precise meaning. If it says the edit is **saved**, the system should have durably recorded it. A broadcast alone is not that guarantee.
+
+Other clients receive the accepted update and apply it through the chosen synchronization model. After a disconnect, the sender may retry; deduplication or an idempotent update format prevents applying the same logical edit twice.
+
+For OT, document-level ordering belongs to the collaboration protocol. For a CRDT, merge order can be more flexible, but we still need a reliable record from which to recover.
+
+## Treat cursors and document content differently
+
+A cursor update is temporary presence information. An editing update changes the document.
+
+I would throttle presence messages and expire them when a user disconnects. They do not need the same durable history as text edits. Cursor anchors also need to follow edits: a raw character offset can become stale when someone inserts text before it.
+
+Keeping these paths separate helps avoid persisting every mouse movement or letting presence traffic compete with content updates.
+
+## Reconnects, recovery, and the questions I would test
+
+A design is not finished when two connected clients can type together. I would test:
+
+- The same update being delivered twice.
+- A disconnect after sending an edit but before receiving its acknowledgement.
+- Two users inserting at the same position, or deleting overlapping ranges.
+- An offline client reconnecting after history has been compacted.
+- A collaboration process restarting during an active session.
+- A user losing edit access while they still have local changes.
+- Formatting, undo, Unicode, and cursor movement under concurrent edits.
+
+The permissions case is particularly important. Being allowed to edit an offline copy does not automatically entitle that client to upload those edits after access is revoked. The product needs an understandable outcome, such as preserving a local copy while refusing changes to the shared document.
+
+## What I would choose for this exercise
+
+If the requirement is a centrally coordinated, mostly online text editor, I would seriously consider OT with an established editor stack.
+
+With offline editing explicitly in scope, I would start by evaluating a sequence CRDT such as Yjs. That is a starting decision for this exercise, not a claim that it is always better. I would validate its rich-text behavior, document growth, and recovery story before committing to it.
+
+The part I want to remember is that choosing OT or a CRDT only answers one part of the design. We still need to explain what “saved” means, how a document recovers, which updates a client is allowed to submit, and what happens when the network disappears halfway through a sentence.
+
+## References and further reading
+
+- [Google Docs: making collaboration fast](https://drive.googleblog.com/2010/09/whats-different-about-new-google-docs.html) — the historical client/server collaboration protocol.
+- [How Figma’s multiplayer technology works](https://www.figma.com/blog/how-figmas-multiplayer-technology-works/) — a different data model and a specific set of trade-offs.
+- [Yjs documentation](https://docs.yjs.dev/) and [document updates](https://docs.yjs.dev/api/document-updates) — implementation-level synchronization APIs.
+- [About CRDTs](https://crdt.tech/) — optimistic replication and convergence.
+- [Differential synchronization](https://neil.fraser.name/writing/sync/) — the original explanation of the shadow-copy approach.
+
+My original study resources also included [this collaborative-documents interview question](https://www.hellointerview.com/community/questions/realtime-collaborative-docs/cm69gjz7n020be7bzjsf6a663) and [this video](https://www.youtube.com/watch?v=EX5uZV3Tzss).

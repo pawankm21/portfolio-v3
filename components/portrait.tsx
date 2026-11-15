@@ -22,6 +22,29 @@ export function Portrait() {
   const stage = useRef<HTMLDivElement>(null);
   const sprites = useRef<Partial<Record<Gaze, SVGGElement | null>>>({});
   const [reducedMotion, setReducedMotion] = useState(true);
+  const [assetState, setAssetState] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const assetsReady = useRef(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    assetsReady.current = false;
+    setAssetState('loading');
+    const sources = [artwork.src, ...frames.flatMap(gaze => eyes.map(eye => `/portrait/eyes/${gaze}_${eye.side}.png`))];
+    let timeout: ReturnType<typeof setTimeout>;
+    const decoded = Promise.all(sources.map(src => {
+      const image = new Image();
+      image.src = src;
+      return image.decode();
+    }));
+    const deadline = new Promise<never>((_, reject) => {
+      timeout = setTimeout(() => reject(new Error('Portrait loading timed out')), 15000);
+    });
+    Promise.race([decoded, deadline]).then(() => {
+      if (!cancelled) { assetsReady.current = true; setAssetState('ready'); }
+    }).catch(() => { if (!cancelled) setAssetState('error'); }).finally(() => clearTimeout(timeout));
+    return () => { cancelled = true; clearTimeout(timeout); };
+  }, [loadAttempt]);
 
   useEffect(() => {
     const preference = matchMedia('(prefers-reduced-motion: reduce)');
@@ -38,7 +61,7 @@ export function Portrait() {
     const update = () => {
       frame = 0;
       const rect = stage.current?.getBoundingClientRect();
-      if (!rect?.width || !pointer || preference.matches || !visible || document.hidden) { show(centerFrame); return; }
+      if (!assetsReady.current || !rect?.width || !pointer || preference.matches || !visible || document.hidden) { show(centerFrame); return; }
       const x = (pointer.x - rect.left) * artwork.width / rect.width;
       const y = (pointer.y - rect.top) * artwork.height / rect.height;
       const dx = x - 600, dy = y - 550;
@@ -50,7 +73,7 @@ export function Portrait() {
     const schedule = () => { if (!frame) frame = requestAnimationFrame(update); };
     const clear = () => { clearTimeout(idleTimer); idleTimer = undefined; pointer = null; cancelAnimationFrame(frame); frame = 0; show(centerFrame); };
     const onMove = (event: PointerEvent) => {
-      if (event.pointerType === 'touch' || preference.matches || !visible) return;
+      if (!assetsReady.current || event.pointerType === 'touch' || preference.matches || !visible) return;
       clearTimeout(idleTimer);
       idleTimer = setTimeout(clear, 2000);
       pointer = { x: event.clientX, y: event.clientY }; schedule();
@@ -75,7 +98,9 @@ export function Portrait() {
     };
   }, []);
 
-  return <div className="portrait personal-portrait" ref={container}><div className="portrait-stage" ref={stage}>
+  return <div className="portrait personal-portrait" ref={container}><div className="portrait-stage" ref={stage} aria-busy={assetState === 'loading'}>
+    {assetState !== 'ready' && <div className="portrait-loading" role="status" aria-live="polite"><span className="portrait-loading-mark" aria-hidden="true">p<span>/</span></span><p>{assetState === 'error' ? 'Portrait couldn’t load.' : 'Loading portrait…'}</p>{assetState === 'error' && <button type="button" onClick={() => setLoadAttempt(attempt => attempt + 1)}>Try again</button>}</div>}
+    <div className="portrait-artwork" data-ready={assetState === 'ready'} aria-hidden={assetState !== 'ready'}>
     <img className="portrait-base" src={artwork.src} width={artwork.width} height={artwork.height} alt="Illustrated portrait of Pawan Mishra, with eyes that follow the cursor." fetchPriority="high" />
     <svg className="portrait-eyes" viewBox={`0 0 ${artwork.width} ${artwork.height}`} aria-hidden="true">
       <defs>
@@ -86,6 +111,7 @@ export function Portrait() {
         {eyes.map(eye => <image key={eye.side} data-eye={eye.side} href={`/portrait/eyes/${gaze}_${eye.side}.png`} x={eye.x} y={eye.y} width={eye.width} height={eye.height} preserveAspectRatio="none" mask="url(#portrait-eye-blend)" />)}
       </g>)}
     </svg>
-    <PortraitObjects motionPaused={reducedMotion} />
+    </div>
+    <PortraitObjects motionPaused={reducedMotion || assetState !== 'ready'} />
     </div><span className="hand portrait-note">Just keeping an eye<br />on Everything.</span></div>;
 }

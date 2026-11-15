@@ -85,3 +85,9 @@ Connect this repository as a Pages project using the Next.js (Static HTML Export
 The chosen settings are baked into `eyeCalibration` in `components/portrait.tsx`: width **206**, height **151**, center-to-center distance **244**. The existing vertical alignment and one-unit left/right height adjustments are preserved to match the approved preview. Temporary controls and browser-storage overrides have been removed.
 
 The electronics object uses the same disclosure interaction as the book, laptop, camera, and shoes. Travel photos are local files in `public/photos/`, lazy-loaded in the personal section. They have not been uploaded or deployed.
+
+## Portrait loading and reading resources
+
+The portrait artwork stays hidden until the face and all 20 eye images have decoded. A local loading placeholder reserves the same space. If an asset fails or loading exceeds 15 seconds, a retry action appears instead of a partial face. Cursor tracking starts only after the assets are ready.
+
+External reading and viewing links live in `lib/reading.ts`, shared by Home and Writing through `components/reading-list.tsx`. They are separate from authored MDX notes.

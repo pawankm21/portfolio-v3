@@ -102,3 +102,20 @@
 .travel-photo>a{border-radius:14px;box-shadow:0 4px 8px rgba(36,37,34,.06),0 16px 28px -10px rgba(36,37,34,.25);transition:transform .25s ease,box-shadow .25s ease}
 .travel-photo>a:hover,.travel-photo>a:focus-visible{transform:translateY(-4px);box-shadow:0 6px 12px rgba(36,37,34,.08),0 22px 34px -12px rgba(36,37,34,.3)}
 @media(prefers-reduced-motion:reduce){.travel-photo>a:hover,.travel-photo>a:focus-visible{transform:none}}
+
+/* Reveal the portrait only after the face and every eye frame have decoded. */
+.portrait-artwork{position:absolute;inset:0;visibility:hidden;opacity:0;transition:opacity .2s ease}
+.portrait-artwork[data-ready="true"]{visibility:visible;opacity:1}
+.portrait-loading{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;padding:20px}
+.portrait-loading-mark{font-family:var(--font-display);font-size:55px;letter-spacing:-5px;color:var(--sage)}.portrait-loading-mark>span{color:var(--red);font-size:40px;margin-left:4px}
+.portrait-loading p{font-size:10px;line-height:1.6;color:var(--muted)}.portrait-loading button{background:var(--paper);border:1px solid var(--line);padding:8px 12px;font:10px var(--font-body);color:var(--ink)}
+.reading-list{list-style:none;padding:0;margin:0 0 25px}
+.reading-resource{display:grid;grid-template-columns:22px minmax(0,1fr) 20px;gap:18px;padding:27px 0;border-top:1px solid var(--line)}.reading-list>li:last-child .reading-resource{border-bottom:1px solid var(--line)}
+.reading-number{font-size:9px;color:var(--muted);padding-top:3px}.reading-resource h3{font-family:var(--font-display);font-size:29px;line-height:1.2;letter-spacing:-.6px;margin-top:9px}.reading-resource p{font-size:11px;line-height:1.7;color:var(--muted);margin-top:12px}.reading-arrow{font-size:20px;color:var(--red);transition:transform .2s ease}.reading-resource:hover h3{color:var(--red)}.reading-resource:hover .reading-arrow{transform:translate(3px,-3px)}.reading-section-title{font-size:35px;margin-bottom:28px}
+@media(max-width:700px){.reading-resource{gap:12px;grid-template-columns:16px minmax(0,1fr) 17px;padding:24px 0}.reading-resource h3{font-size:26px}.reading-resource p{font-size:10px}.reading-section-title{font-size:32px}.portrait-loading-mark{font-size:65px}}
+
+.article-body table{display:block;width:100%;overflow-x:auto;border-collapse:collapse;margin:30px 0 40px;font-size:12px;line-height:1.7}
+.article-body th,.article-body td{border:1px solid var(--line);padding:14px;text-align:left;vertical-align:top;min-width:155px}
+.article-body th{background:#ebece1;color:var(--ink);font-weight:500}
+.article-diagram{margin:40px 0;padding:18px;background:#fff;border:1px solid var(--line);border-radius:8px}
+.article-diagram img{display:block;width:100%;height:auto}.article-diagram figcaption{font-size:11px;line-height:1.7;color:var(--muted);margin-top:15px}
