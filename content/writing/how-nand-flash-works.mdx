@@ -8,15 +8,15 @@ featured: true
 date: "2026-11-16"
 related: []
 ---
-An SSD can remember your files with no power connected. No battery keeps each bit alive. **The memory is a physical arrangement of trapped charge.**
+An SSD keeps your files without power by trapping charge inside its memory cells. The controller reads the effect of that charge to recover the bits.
 
-That one detail explains a surprising amount: how reads work, why updates move data, and why deleting a file does not immediately erase its cells.
+Writing, updating, and deleting data all depend on how the cells hold and release it.
 
-## 1. Trap electrons inside a cell
+## Trap electrons inside a cell
 
 A flash cell is a transistor with a charge-storage region. Its **control gate** controls current through a semiconductor **channel**. Stored electrons change how much gate voltage it takes to make that channel conduct.
 
-Classic NAND stores charge in an insulated conductor called a **floating gate**. Many modern 3D NAND designs use localized traps in an insulating layer instead. Different structures, same useful property: charge persists without continuous power. [KIOXIA explains both designs.](https://americas.kioxia.com/content/dam/kioxia/en-us/business/memory/mlc-nand/asset/KIOXIA_TBW_WAF_NAND_Endurance_Technical_Brief.pdf)
+Classic NAND stores charge in an insulated conductor called a **floating gate**. Many modern 3D NAND designs use localized traps in an insulating layer instead. Both structures retain charge without continuous power. [KIOXIA explains both designs.](https://americas.kioxia.com/content/dam/kioxia/en-us/business/memory/mlc-nand/asset/KIOXIA_TBW_WAF_NAND_Endurance_Technical_Brief.pdf)
 
 <figure className="article-diagram">
   <img src="/writing/how-nand-flash-works/cell.svg" alt="A floating gate sits between insulating layers above a channel. A strong field enables electrons to tunnel into storage; removing that field greatly slows their escape." width="820" height="445" />
@@ -25,15 +25,13 @@ Classic NAND stores charge in an insulated conductor called a **floating gate**.
 
 ### How do electrons cross an insulator?
 
-The insulator presents an energy barrier. Quantum mechanics gives an electron a nonzero probability of crossing a sufficiently thin barrier, even without enough energy to pass over it. That is **quantum tunnelling**—not a hole punched through the material.
+The insulator presents an energy barrier. Quantum mechanics gives an electron a nonzero probability of crossing a sufficiently thin barrier, even without enough energy to pass over it. This is quantum tunnelling. The insulator remains intact.
 
 During programming, a strong electric field reshapes the barrier and makes tunnelling much more likely. Classic NAND uses **Fowler–Nordheim tunnelling** to move electrons from the channel into the floating gate. Programming uses controlled pulses and verification to reach the intended state. [The device physics is described here.](https://www.mdpi.com/2073-431X/6/2/16)
 
-> Strong field: transfer charge deliberately. Remove that field: make escape very slow.
+With the programming field removed, escape becomes very slow. The cell can retain its state without power and still be rewritten with an applied field.
 
-That difference lets a cell be writable and nonvolatile.
-
-## 2. Read the charge’s effect
+## Read the charge’s effect
 
 The controller does not count electrons. It measures their effect on **threshold voltage**: the gate voltage needed to turn the transistor on.
 
@@ -55,7 +53,7 @@ More bits per cell means distinguishing more threshold ranges:
 
 TLC stores one of eight distinguishable states, not three independent charges in separate compartments. More states improve density but tighten the margins for noise and drift. [More on multi-level storage.](https://www.kioxia.com/en-jp/rd/technology/multi-level-cell.html)
 
-## 3. Keep the data without power
+## Keep the data without power
 
 The insulating barriers make charge movement slow enough to preserve readable states for long periods. Every electron need not stay forever; the cell must remain distinguishable as the intended state, within error-correction limits.
 
@@ -68,11 +66,9 @@ Two different lifetimes matter:
 
 Program/erase cycles gradually damage the materials. Error correction helps recover imperfect reads; wear leveling spreads rewriting across blocks. Neither makes the flash unlimited. [KIOXIA’s endurance brief](https://americas.kioxia.com/content/dam/kioxia/en-us/business/memory/mlc-nand/asset/KIOXIA_TBW_WAF_NAND_Endurance_Technical_Brief.pdf) connects these mechanisms.
 
-## 4. Follow a file through the SSD
+## Follow a file through the SSD
 
-Here is the constraint that shapes everything above the cell:
-
-> **Read and program pages. Erase whole blocks.**
+NAND reads and programs pages, but erases whole blocks.
 
 A block contains many pages. Arbitrarily replacing a programmed page’s contents requires erasing its block first. The controller avoids doing that for every update by writing elsewhere and changing a mapping. Its **flash translation layer (FTL)** maps logical addresses to physical flash locations. [Samsung’s overview](https://download.semiconductor.samsung.com/resources/white-paper/Samsung_SSD_White_Paper.pdf) and [SPDK’s internals guide](https://spdk.io/doc/ssd_internals.html) explain this organization.
 
@@ -117,6 +113,6 @@ Physical erase returns cells toward their erased threshold range. In a floating-
 
 ## The software consequence
 
-The part I find most interesting is the extra movement hidden behind a small edit. Copying live pages during reclamation creates **write amplification**: more bytes written to NAND than the host supplied. Spare capacity gives the controller room to work. [Samsung’s data-placement explanation](https://semiconductor.samsung.com/news-events/tech-blog/flexible-data-placement/) connects those costs to page placement.
+Copying live pages during reclamation creates write amplification: more bytes written to NAND than the host supplied. Spare capacity gives the controller room to work. [Samsung’s data-placement explanation](https://semiconductor.samsung.com/news-events/tech-blog/flexible-data-placement/) connects those costs to page placement.
 
-A ten-byte edit begins as a software operation. Eventually, it becomes controlled electron transfer, a new physical location, and perhaps a whole block reclaimed.
+Even a small edit can therefore cause writes beyond the data that changed.

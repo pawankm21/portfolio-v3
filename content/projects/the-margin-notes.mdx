@@ -10,9 +10,7 @@ related: []
 image: "/projects/the-margin-notes.svg"
 imageAlt: "Editorial cover illustration for The Margin Notes portfolio."
 ---
-A portfolio is a small system with a surprisingly tricky brief: make the work easy to understand, and leave room for the person behind it.
-
-This site is the current experiment. The visual direction pairs editorial typography and generous space with handwritten margin notes and a cursor-following portrait.
+This is my current portfolio. It uses editorial typography, handwritten margin notes, and a portrait whose eyes follow the cursor.
 
 ## The constraints
 
@@ -20,7 +18,7 @@ The site has three primary pages: Home, Projects, and Writing. It should work wi
 
 The portrait uses supplied personal artwork. The eye-free base and directional eye frames are separate, so the interaction can change without redrawing the face.
 
-## A deliberately small architecture
+## Architecture
 
 Next.js App Router renders the pages. TypeScript defines the content shape. Project case studies and writing live in MDX files, separate from their layouts. A static export keeps deployment simple.
 
@@ -30,7 +28,7 @@ Only the navigation state and portrait need client-side behavior. The lists, art
 
 ## Making eye contact
 
-The pointer is measured relative to the portrait, then mapped to one of eight directional eye frames. A neutral frame appears after two seconds of pointer inactivity; a cross-eyed frame adds a small interaction near the nose. Each eye uses its own fixed placement box, with size and inter-eye spacing configured independently.
+The pointer is measured relative to the portrait, then mapped to one of eight directional eye frames. A cross-eyed frame appears when the pointer is near the nose. Each eye uses its own fixed placement box, with size and inter-eye spacing configured independently.
 
 Frames are scheduled only when the pointer or layout changes. The portrait resets when the pointer leaves the window, and tracking pauses offscreen. The eyes return to neutral after two seconds without pointer movement. Reduced-motion preferences disable tracking.
 
@@ -38,8 +36,6 @@ Frames are scheduled only when the pointer or layout changes. The portrait reset
 
 Directional sprites preserve the style of the supplied portrait. They require careful alignment and switch between discrete directions rather than continuous pupil motion. The base image and eye layers remain separate, with soft SVG masks to blend the cutout edges.
 
-The site's limited content is visible rather than disguised. There are no fabricated client projects or invented performance numbers.
-
 ## What is still evolving
 
-Published engineering notes and new personal experiments will make this more personal. Accessibility and layout checks are part of implementation; this page makes no claim about measured production performance yet.
+I’m adding engineering notes and personal projects as I work on them. I check accessibility and layout during implementation, but haven’t measured production performance yet.
