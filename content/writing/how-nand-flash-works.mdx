@@ -1,6 +1,6 @@
 ---
-title: "How NAND flash works: trapped electrons to stored files"
-summary: "How quantum tunnelling puts charge into a flash cell, why it stays there without power, and what happens when you write, read, update, or delete a file on an SSD."
+title: "How NAND flash works"
+summary: "From quantum tunnelling to deleting a file: how an SSD stores charge, reads bits, and reclaims space."
 topic: "Hardware · Storage"
 status: "note"
 published: true
@@ -8,193 +8,115 @@ featured: true
 date: "2026-11-16"
 related: []
 ---
-Unplug an SSD, leave it in a drawer, and the files can still be there years later. There is no battery keeping each bit alive. So what, physically, remembers the data?
+An SSD can remember your files with no power connected. No battery keeps each bit alive. **The memory is a physical arrangement of trapped charge.**
 
-Electrons, held inside structures designed to make escaping difficult.
+That one detail explains a surprising amount: how reads work, why updates move data, and why deleting a file does not immediately erase its cells.
 
-What interests me is how that tiny physical detail reaches all the way up to software. It explains why an SSD can read data without destroying it, why changing a file usually means writing somewhere new, and why pressing Delete is different from erasing the flash underneath.
+## 1. Trap electrons inside a cell
 
-Let’s start with one cell, then follow a small file through the drive.
+A flash cell is a transistor with a charge-storage region. Its **control gate** controls current through a semiconductor **channel**. Stored electrons change how much gate voltage it takes to make that channel conduct.
 
-## Put electrons somewhere they cannot easily escape
+Classic NAND stores charge in an insulated conductor called a **floating gate**. Many modern 3D NAND designs use localized traps in an insulating layer instead. Different structures, same useful property: charge persists without continuous power. [KIOXIA explains both designs.](https://americas.kioxia.com/content/dam/kioxia/en-us/business/memory/mlc-nand/asset/KIOXIA_TBW_WAF_NAND_Endurance_Technical_Brief.pdf)
 
-A flash cell is a transistor with a charge-storage region. A voltage on its **control gate** influences whether current can flow through a semiconductor **channel**.
+<figure className="article-diagram">
+  <img src="/writing/how-nand-flash-works/cell.svg" alt="A floating gate sits between insulating layers above a channel. A strong field enables electrons to tunnel into storage; removing that field greatly slows their escape." width="820" height="445" />
+  <figcaption>Programming moves charge into storage. Holding data requires no programming field. This simplified floating-gate stack is not a literal cross-section of every 3D NAND design.</figcaption>
+</figure>
 
-In a classic floating-gate cell, an electrically isolated conductor stores charge. Many modern 3D NAND designs instead use a **charge-trap layer**, commonly silicon nitride, with localized sites that hold electrons. These are different structures, but both preserve information through stored charge. [KIOXIA explains the distinction in its NAND endurance brief.](https://americas.kioxia.com/content/dam/kioxia/en-us/business/memory/mlc-nand/asset/KIOXIA_TBW_WAF_NAND_Endurance_Technical_Brief.pdf)
+### How do electrons cross an insulator?
 
-A simplified floating-gate cross-section looks like this:
+The insulator presents an energy barrier. Quantum mechanics gives an electron a nonzero probability of crossing a sufficiently thin barrier, even without enough energy to pass over it. That is **quantum tunnelling**—not a hole punched through the material.
 
-```text
-              Control gate
-          ───────────────────
-             Insulating layer
-          ───────────────────
-          Floating gate: e⁻ e⁻    ← stored charge
-          ───────────────────
-             Thin tunnel oxide
-          ───────────────────
-          Semiconductor channel
-          source ──────── drain
-```
+During programming, a strong electric field reshapes the barrier and makes tunnelling much more likely. Classic NAND uses **Fowler–Nordheim tunnelling** to move electrons from the channel into the floating gate. Programming uses controlled pulses and verification to reach the intended state. [The device physics is described here.](https://www.mdpi.com/2073-431X/6/2/16)
 
-This is a conceptual stack, not the geometry of every NAND chip. Vertical 3D cells wrap layers around a channel, and charge-trap cells replace the floating conductor with a trapping dielectric.
+> Strong field: transfer charge deliberately. Remove that field: make escape very slow.
 
-The immediate problem is obvious: if the storage region is insulated, how do electrons get into it?
+That difference lets a cell be writable and nonvolatile.
 
-## Quantum tunnelling makes programming possible
+## 2. Read the charge’s effect
 
-An insulating layer presents an energy barrier. In a classical picture, an electron without enough energy to cross that barrier would remain on its original side.
+The controller does not count electrons. It measures their effect on **threshold voltage**: the gate voltage needed to turn the transistor on.
 
-Quantum mechanics describes the electron with a wavefunction. Inside a finite barrier, that wavefunction decays rather than immediately becoming zero. If the barrier is sufficiently thin, there is a nonzero probability of finding the electron on the other side. This is **tunnelling**. It does not require drilling a hole through the insulator.
+In the conventional single-bit model, stored negative charge raises the threshold. Apply a read voltage between the erased and programmed ranges: the erased cell conducts; the programmed cell does not. Conventionally, those states mean `1` and `0`. [KIOXIA illustrates this readout.](https://www.kioxia.com/en-jp/rd/technology/nand-flash.html)
 
-During programming, a strong electric field changes the barrier’s shape, making tunnelling much more likely. Classic NAND uses **Fowler–Nordheim tunnelling** to transfer electrons from the channel into the floating gate. [This device-level review describes the programming mechanism.](https://www.mdpi.com/2073-431X/6/2/16)
+<figure className="article-diagram">
+  <img src="/writing/how-nand-flash-works/threshold.svg" alt="An SLC read voltage separates a low erased threshold range from a higher programmed range. TLC distinguishes eight ranges, representing three bits per cell." width="820" height="475" loading="lazy" />
+  <figcaption>Reading senses current; it does not drain the stored charge. Distributions and spacing are schematic. TLC range numbers above are indices, not actual bit encodings.</figcaption>
+</figure>
 
-Think of two operating conditions:
+More bits per cell means distinguishing more threshold ranges:
 
-| Condition | Electric field across the barrier | Result |
-| --- | --- | --- |
-| Programming | Strong, deliberately applied | Appreciable electron transfer during a controlled pulse |
-| Holding data | No programming field | Escape is sufficiently slow for nonvolatile storage |
-
-The cell is not tunnelling at its programming rate all the time. That difference is how the same barrier can permit an intentional write and then retain charge for a long period.
-
-## Stored charge changes an electrical threshold
-
-The controller does not count individual electrons when reading a cell. It detects their electrical effect.
-
-A transistor’s **threshold voltage** is the gate voltage needed to make its channel conduct. Adding negative charge to the storage region generally raises that threshold in the conventional NAND model.
-
-For a simple single-bit cell, choose a read voltage between two threshold ranges:
-
-- An erased cell has a lower threshold and conducts at that voltage.
-- A programmed cell has a higher threshold and does not.
-
-The conventional SLC interpretation calls the erased state `1` and the programmed state `0`. That is an encoding convention, not a universal rule that an electron “is a zero.” [KIOXIA illustrates this readout process.](https://www.kioxia.com/en-jp/rd/technology/nand-flash.html)
-
-A read senses current through the channel. It does not empty the charge-storage region to discover what was there.
-
-## More bits mean more threshold ranges
-
-A cell can represent more than two states by placing its threshold into one of several ranges.
-
-| NAND type | Bits per cell | Distinguishable states |
+| Type | Bits per cell | Threshold states |
 | --- | --- | --- |
 | SLC | 1 | 2 |
-| MLC, in the usual two-bit sense | 2 | 4 |
+| MLC, usually | 2 | 4 |
 | TLC | 3 | 8 |
 | QLC | 4 | 16 |
 
-Three bits have eight possible combinations, so TLC needs eight threshold distributions. It does not contain three independent little storage compartments. The reader distinguishes ranges using reference voltages, then decodes the stored pattern. The exact pattern assigned to each range depends on the design. [KIOXIA’s multi-level explanation shows the relationship.](https://www.kioxia.com/en-jp/rd/technology/multi-level-cell.html)
+TLC stores one of eight distinguishable states, not three independent charges in separate compartments. More states improve density but tighten the margins for noise and drift. [More on multi-level storage.](https://www.kioxia.com/en-jp/rd/technology/multi-level-cell.html)
 
-More states increase capacity per cell. They also leave less room for drift and noise between neighboring ranges.
+## 3. Keep the data without power
 
-## Why can the data survive for years?
+The insulating barriers make charge movement slow enough to preserve readable states for long periods. Every electron need not stay forever; the cell must remain distinguishable as the intended state, within error-correction limits.
 
-Once programming stops, the storage structure still contains charge. No continuous power supply is needed to preserve that physical condition. The surrounding barriers make charge movement slow enough that a readable threshold can persist for a long time.
+Charge can leak or redistribute over time. **Retention depends on temperature, wear, and the NAND design**—“can last for years” is not a guarantee for every SSD under every condition. A powered controller may perform maintenance; an unplugged drive cannot refresh itself. [Retention experiments](https://arxiv.org/abs/1805.02819) and [Dell’s power-off guidance](https://www.dell.com/support/kbdoc/en-us/000198930/ssd-data-retention-considerations-when-powering-off-systems-for-a-prolonged-duration) explain these limits.
 
-But retention does not require every original electron to remain forever. It requires the cell to stay distinguishable as its intended state, with errors within what the drive can correct.
+Two different lifetimes matter:
 
-Charge can leak or redistribute, shifting threshold distributions. Experimental work on MLC NAND measures how retention age changes the useful read reference voltages and how adapting those references can recover data. [Cai and colleagues describe those results here.](https://arxiv.org/abs/1805.02819)
+- **Retention:** how long stored data remains readable.
+- **Endurance:** how much programming and erasing the cells withstand.
 
-Retention depends on the NAND technology, its wear, and storage conditions. Higher temperatures generally accelerate relevant leakage mechanisms; a heavily cycled drive also has different margins from a fresh one. Dell’s [power-off retention guidance](https://www.dell.com/support/kbdoc/en-us/000198930/ssd-data-retention-considerations-when-powering-off-systems-for-a-prolonged-duration) explains why a drive’s specification must be read with its conditions.
+Program/erase cycles gradually damage the materials. Error correction helps recover imperfect reads; wear leveling spreads rewriting across blocks. Neither makes the flash unlimited. [KIOXIA’s endurance brief](https://americas.kioxia.com/content/dam/kioxia/en-us/business/memory/mlc-nand/asset/KIOXIA_TBW_WAF_NAND_Endurance_Technical_Brief.pdf) connects these mechanisms.
 
-So “flash can retain data for years” describes a capability, not a blanket guarantee for any SSD in any drawer. A powered controller may perform maintenance, but an unplugged SSD cannot refresh itself.
+## 4. Follow a file through the SSD
 
-There is a second lifetime limit: **endurance**. Repeated program/erase cycles stress the materials, eventually making reliable storage harder. Controllers use error correction and wear leveling to manage that limitation. Retention is how long stored information remains readable; endurance is how much rewriting the medium can withstand. [KIOXIA connects these wear mechanisms to controller protections.](https://americas.kioxia.com/content/dam/kioxia/en-us/business/memory/mlc-nand/asset/KIOXIA_TBW_WAF_NAND_Endurance_Technical_Brief.pdf)
+Here is the constraint that shapes everything above the cell:
 
-## From one cell to an SSD
+> **Read and program pages. Erase whole blocks.**
 
-NAND connects cells in series into strings. Their arrangement lets the chip select cells electrically while operating on many bits together. The drive then manages larger units:
+A block contains many pages. Arbitrarily replacing a programmed page’s contents requires erasing its block first. The controller avoids doing that for every update by writing elsewhere and changing a mapping. Its **flash translation layer (FTL)** maps logical addresses to physical flash locations. [Samsung’s overview](https://download.semiconductor.samsung.com/resources/white-paper/Samsung_SSD_White_Paper.pdf) and [SPDK’s internals guide](https://spdk.io/doc/ssd_internals.html) explain this organization.
 
-- A **page** is a unit used for programming and reading NAND data.
-- An **erase block** contains many pages that must be erased together.
-- The **controller** translates host requests into flash operations.
+Let’s save `notes.txt` containing `Hello NAND`. For this toy example, its data occupies logical address **L42**, initially mapped to physical page **A0**. Real files also have filesystem metadata, and logical units do not necessarily match physical pages.
 
-Page sizes, block sizes, programming sequences, and multi-bit organization vary by generation. A host’s logical sector is not necessarily one physical NAND page.
+<figure className="article-diagram">
+  <img src="/writing/how-nand-flash-works/lifecycle.svg" alt="Write Hello NAND to A0 and map L42 to it. Read via that mapping. Update to Hello SSD in B0, making A0 stale. Delete and TRIM invalidate B0. Later garbage collection preserves other live pages and erases each whole block." width="820" height="680" loading="lazy" />
+  <figcaption>The host sees logical addresses. The controller manages physical pages and reclaims their blocks later. A0 and B0 belong to different erase blocks.</figcaption>
+</figure>
 
-The key restriction is that NAND cannot accept arbitrary new contents over an already programmed page. For general reuse, it needs a block erase. Samsung’s [NAND and flash-management overview](https://download.semiconductor.samsung.com/resources/white-paper/Samsung_SSD_White_Paper.pdf) explains this mismatch between small writes and larger erases.
+### Write: turn bytes into charge states
 
-That restriction is why an SSD needs a **flash translation layer**, or FTL. The computer addresses logical blocks; the FTL tracks where their current contents live physically.
+The filesystem allocates storage and sends bytes and addresses—not usually the filename—to the SSD. The controller picks erased space, encodes data with error-correction information, programs cells, and preserves the mapping **L42 → A0**.
 
-## Example: write a small file
+A write can first land in a cache. Persistence depends on the system’s write/flush guarantees and the device’s power-loss behavior; a write call returning alone does not prove every bit has reached NAND.
 
-Suppose I save `notes.txt`, containing `Hello NAND`.
+### Read: map, sense, correct
 
-To keep the bookkeeping visible, imagine its data fits in one logical unit called **L42**, and the controller places it into physical page **A0**. These are invented labels. Real files also involve filesystem metadata, and real SSDs combine, split, encode, and distribute writes across many cells.
+Assuming the request reaches the SSD rather than being served from a host cache, the controller resolves **L42 → A0**. The chip selects the cells, applies read and pass voltages, and senses current. Decoding and error correction recover the bytes.
 
-First, the filesystem allocates storage and issues writes. The SSD usually receives block addresses and bytes, not the filename `notes.txt`.
+A difficult read may trigger retries with adjusted references. Ordinary reads retain the charge, although repeated reads can disturb cells over time. [KIOXIA’s reliability handbook](https://www.kioxia.com/content/dam/kioxia/en-jp/about/asset/reliability-handbook-e.pdf) covers these failure mechanisms.
 
-The controller chooses available erased space, prepares the data with error-correction information, and programs the target cells. Programming uses pulses and verification to reach the intended states. It also preserves enough mapping information to find the data again.
+### Update: write a new page
 
-Our simplified map now says:
+Change the text to `Hello SSD!`. The controller programs **B0**, changes the map to **L42 → B0**, and marks A0 stale. Its old charge pattern can remain, but normal reads now find B0.
 
-```text
-Logical address       Physical location
-L42                   Block A, page A0
+This indirection is what makes the host’s freely rewritable address space work on flash that needs block erases.
 
-Block A:  [A0: Hello NAND] [A1: other data] [A2: erased]
-```
+### Delete: release, notify, reclaim
 
-The file becomes persistent only once the relevant data and metadata have reached durable storage under the system’s write/flush guarantees. A save can initially land in an operating-system or device cache; the application returning from a write is not, by itself, proof that every bit has reached NAND.
+Assume the file is actually removed, not merely moved to Trash.
 
-## Read the file back
+1. **Release:** the filesystem marks its storage free.
+2. **Notify:** the OS can tell the SSD those logical addresses are unnecessary—TRIM on SATA, deallocation on NVMe. This may be batched or delayed.
+3. **Reclaim:** garbage collection later copies any other live pages out of a chosen block, updates their mappings, and erases that entire block.
 
-Assume this read misses the operating system’s cache and reaches the SSD.
+A0 and B0 are reclaimed when their respective blocks are selected. The drive need not erase either one the instant the file disappears. [Samsung explains how TRIM lets garbage collection skip invalid data.](https://semiconductor.samsung.com/consumer-storage/support/faqs/internalssd-product-information/)
 
-The controller resolves **L42 → A0** and asks the flash to read that page. The chip applies read and pass voltages so that the selected cells’ thresholds determine the sensed result. Data then passes through decoding and error correction before the controller returns bytes to the host.
+Physical erase returns cells toward their erased threshold range. In a floating-gate cell, an applied field moves electrons out through the tunnel barrier; charge-trap erase details vary by design.
 
-If the first attempt has too many errors, the drive may retry with adjusted read references. Error correction has limits; it is not a promise that arbitrarily damaged cells can be recovered. KIOXIA’s [reliability handbook](https://www.kioxia.com/content/dam/kioxia/en-jp/about/asset/reliability-handbook-e.pdf) covers retention and read-disturb failure mechanisms.
+**Deleting, deallocating, and physically erasing are separate events.** TRIM is not a secure-sanitization guarantee, and reading a deallocated address does not reliably expose old cell contents.
 
-The electrons remain stored during ordinary reads. Repeated reading can nevertheless disturb cells over time, which the controller must manage.
+## The software consequence
 
-## Edit the file: write somewhere new
+The part I find most interesting is the extra movement hidden behind a small edit. Copying live pages during reclamation creates **write amplification**: more bytes written to NAND than the host supplied. Spare capacity gives the controller room to work. [Samsung’s data-placement explanation](https://semiconductor.samsung.com/news-events/tech-blog/flexible-data-placement/) connects those costs to page placement.
 
-Now change the contents to `Hello SSD!`.
-
-Instead of erasing Block A just to replace A0, the controller writes the new version into another available page, say **B0**, then updates the mapping. A0 becomes stale.
-
-```text
-Before:  L42 → A0 → Hello NAND
-After:   L42 → B0 → Hello SSD!
-
-Block A: [A0: stale]      [A1: other live data] [A2: erased]
-Block B: [B0: Hello SSD!] [B1: erased]          [B2: erased]
-```
-
-The logical address stays the same while its physical location changes. Old charge patterns can remain in A0 even though ordinary reads now resolve to B0. This is the core indirection described in the [SPDK SSD internals guide](https://spdk.io/doc/ssd_internals.html).
-
-## Delete the file: three different events
-
-When I delete `notes.txt`, there are several layers involved. Moving it to a trash folder may not even free its storage yet. Assume it is actually removed and its storage released.
-
-**First, the filesystem stops treating the file’s blocks as allocated.** That changes filesystem metadata. It does not automatically send an erase pulse to every cell that held the file.
-
-**Next, the operating system can tell the SSD that those logical addresses are no longer needed.** SATA calls this TRIM; NVMe provides deallocation through Dataset Management. Notification can be delayed or batched, and depends on the storage stack passing it through.
-
-The SSD can now treat the corresponding contents as unnecessary during reclamation. Samsung describes [TRIM as a way to avoid copying invalid data during garbage collection](https://semiconductor.samsung.com/consumer-storage/support/faqs/internalssd-product-information/). It is not a promise of immediate physical erasure or secure sanitization. Reads after deallocation also depend on device behavior; they are not a reliable view into old charge patterns.
-
-**Finally, garbage collection reclaims an erase block.** In our example, Block A still contains A1’s live data. The controller copies that elsewhere, updates its mapping, and erases all of Block A. A0’s old version is reclaimed along with the rest. B0’s deleted version can be reclaimed when its own block is selected.
-
-Physically, erase changes the charge state back toward the erased threshold range across the block. In the floating-gate picture, an applied field drives electrons out through the tunnel barrier. Charge-trap erase mechanisms vary, so this should not be read as a universal voltage recipe for every 3D cell.
-
-## Why these details matter to software
-
-An SSD presents something that looks like freely rewritable blocks. Underneath, it programs new locations, moves valid data, and erases larger regions.
-
-Those internal copies create **write amplification**: NAND can receive more written bytes than the host sent. Wear leveling distributes erase cycles rather than repeatedly exhausting the same physical blocks. Spare capacity gives the controller room to relocate data. Samsung’s [data-placement discussion](https://semiconductor.samsung.com/news-events/tech-blog/flexible-data-placement/) connects page placement, garbage collection, and internal write overhead.
-
-That is the connection I find most satisfying: the way electrons cross an insulating barrier helps explain why editing ten bytes can eventually cause much more data to move inside a drive.
-
-## Sources
-
-- [NAND cell structure and readout — KIOXIA](https://www.kioxia.com/en-jp/rd/technology/nand-flash.html)
-- [Multi-level cell technology — KIOXIA](https://www.kioxia.com/en-jp/rd/technology/multi-level-cell.html)
-- [NAND reliability and tunnelling — Spinelli, Monzio Compagnoni, and Lacaita](https://www.mdpi.com/2073-431X/6/2/16)
-- [Experimental retention characterization — Cai and colleagues](https://arxiv.org/abs/1805.02819)
-- [NAND endurance and controller protections — KIOXIA](https://americas.kioxia.com/content/dam/kioxia/en-us/business/memory/mlc-nand/asset/KIOXIA_TBW_WAF_NAND_Endurance_Technical_Brief.pdf)
-- [Power-off retention conditions — Dell](https://www.dell.com/support/kbdoc/en-us/000198930/ssd-data-retention-considerations-when-powering-off-systems-for-a-prolonged-duration)
-- [Reliability handbook — KIOXIA](https://www.kioxia.com/content/dam/kioxia/en-jp/about/asset/reliability-handbook-e.pdf)
-- [NAND, programming, and garbage collection — Samsung white paper](https://download.semiconductor.samsung.com/resources/white-paper/Samsung_SSD_White_Paper.pdf)
-- [Logical mapping and deallocation — SPDK](https://spdk.io/doc/ssd_internals.html)
-- [TRIM and invalid data — Samsung FAQ](https://semiconductor.samsung.com/consumer-storage/support/faqs/internalssd-product-information/)
-- [Placement and write overhead — Samsung](https://semiconductor.samsung.com/news-events/tech-blog/flexible-data-placement/)
+A ten-byte edit begins as a software operation. Eventually, it becomes controlled electron transfer, a new physical location, and perhaps a whole block reclaimed.
