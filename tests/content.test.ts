@@ -23,3 +23,10 @@ test('related content resolves only published entries in the other collection', 
   const draft = parseEntry(valid.replace('published: true', 'related: ["the-margin-notes"]'), 'test-note', 'writing');
   assert.deepEqual(getRelated(draft).map(p => p.slug), ['the-margin-notes']);
 });
+
+test('project images require a local asset path and descriptive alt text', () => {
+  const withImage = valid.replace('published: true', 'published: true\nimage: "/projects/example.svg"\nimageAlt: "Example project cover"');
+  assert.equal(parseEntry(withImage, 'example', 'projects').image, '/projects/example.svg');
+  assert.throws(() => parseEntry(withImage.replace('/projects/example.svg', 'https://example.com/image.svg'), 'example', 'projects'), /local project image/);
+  assert.throws(() => parseEntry(withImage.replace('imageAlt: "Example project cover"', ''), 'example', 'projects'), /imageAlt is required/);
+});

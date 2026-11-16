@@ -7,7 +7,7 @@ export type Entry = {
   slug: string; collection: Collection; title: string; summary: string;
   topic: string; status: 'in-progress' | 'complete' | 'experiment' | 'note';
   published: boolean; featured: boolean; date: string; body: string;
-  related: string[];
+  related: string[]; image?: string; imageAlt?: string;
 };
 const validSlug = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
@@ -22,7 +22,9 @@ export function parseEntry(raw: string, slug: string, collection: Collection): E
   const date = data.date ?? '';
   if (typeof date !== 'string' || (date && (!/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(Date.parse(date))))) throw new Error(`${slug}: date must be a quoted YYYY-MM-DD string`);
   if (data.related !== undefined && (!Array.isArray(data.related) || data.related.some((item: unknown) => typeof item !== 'string' || !validSlug.test(item)))) throw new Error(`${slug}: related must contain slugs`);
-  return { slug, collection, title: data.title.trim(), summary: data.summary.trim(), topic: data.topic.trim(), status, published: data.published === true, featured: data.featured === true, date, body: content, related: data.related ?? [] };
+  if (data.image !== undefined && (typeof data.image !== 'string' || !/^\/projects\/[a-z0-9-]+\.(png|jpg|webp|svg)$/.test(data.image))) throw new Error(`${slug}: image must be a local project image`);
+  if (data.image !== undefined && (typeof data.imageAlt !== 'string' || !data.imageAlt.trim())) throw new Error(`${slug}: imageAlt is required`);
+  return { image: data.image, imageAlt: data.imageAlt, slug, collection, title: data.title.trim(), summary: data.summary.trim(), topic: data.topic.trim(), status, published: data.published === true, featured: data.featured === true, date, body: content, related: data.related ?? [] };
 }
 export function getEntries(collection: Collection): Entry[] {
   const directory = path.join(process.cwd(), 'content', collection);
