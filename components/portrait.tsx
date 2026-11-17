@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
+import { PortraitPeel } from './portrait-peel';
 import { PortraitObjects } from './portrait-objects';
 
 // All positions use the original portrait's coordinate system. Each eye has
@@ -112,6 +113,7 @@ export function Portrait() {
       </g>)}
     </svg>
     </div>
+    {assetState === 'ready' && <PortraitPeel artwork={artwork} eyes={eyes} />}
     <PortraitObjects motionPaused={reducedMotion || assetState !== 'ready'} />
     </div><span className="hand portrait-note">Just keeping an eye<br />on Everything.</span></div>;
 }

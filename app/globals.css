@@ -178,3 +178,32 @@
   .outside .travel-photo figcaption>span{font-size:7px;letter-spacing:.4px}
 }
 @media(prefers-reduced-motion:reduce){.note-card-image{transition:none}.note-card:hover .note-card-image{transform:none}}
+
+/* Small, finite gestures keep the work readable while adding depth. */
+.request-diagram{display:block;width:100%;height:100%;overflow:visible}
+@media(prefers-reduced-motion:no-preference){
+  .career-stop[data-revealed="true"] .career-position{animation:career-arrive .55s ease-out both}
+  .career-stop[data-revealed="true"]::after{transform-origin:top;animation:career-line .8s ease-out both}
+  .request-diagram[data-revealed="true"] .request-dot{animation:request-pass 2.4s ease-in-out .2s both}
+  .request-diagram[data-revealed="true"] .refill-token{animation:token-refill .8s ease-in-out .2s both}
+  main>.section[data-revealed="true"]>.section-content{animation:section-spring .85s both}
+  @supports(animation-timeline:scroll()){
+    .hero-identity{view-timeline-name:--hero-depth;view-timeline-axis:block}
+    .hero-identity .eyebrow,.hero-identity h1,.hero-identity .hero-bottom,.hero-identity .portrait-note{animation:section-fade linear both;animation-timeline:--hero-depth;animation-range:exit 0% exit 55%}
+    main>.section .section-label,main>.section h2,main>.section h3,main>.section p,main>.section .entry-meta,main>.section .text-link,main>.section figcaption{animation:section-fade linear both;animation-timeline:view();animation-range:exit 0% exit 100%}
+  }
+}
+@keyframes career-arrive{from{transform:translateY(10px);opacity:.65}to{transform:translateY(0);opacity:1}}
+@keyframes career-line{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+@keyframes token-refill{from{transform:translateY(0);opacity:1}to{transform:translateY(95px);opacity:0}}
+@keyframes request-pass{0%{transform:translateX(0)}35%,55%{transform:translateX(210px)}100%{transform:translateX(540px)}}
+@keyframes section-fade{0%,15%{opacity:1}100%{opacity:0}}
+@keyframes section-spring{0%{transform:translateY(22px)}55%{transform:translateY(-5px)}78%{transform:translateY(2px)}100%{transform:translateY(0)}}
+
+/* React Bits curls the portrait surface; keep its canvas outside page layout. */
+.portrait-peel{position:absolute;inset:0;pointer-events:none;overflow:clip;overflow-clip-margin:40px}
+.portrait-peel .sticker-peel{visibility:hidden}
+.portrait-peel .sticker-peel-hit{pointer-events:none;touch-action:auto}
+.portrait-peel[data-active="true"] .sticker-peel[data-ready="true"]{visibility:visible}
+.portrait-stage:has(.portrait-peel[data-active="true"] .sticker-peel[data-ready="true"])>.portrait-artwork{opacity:0;transition:none}
+@media(prefers-reduced-motion:reduce){.portrait-peel{display:none}.portrait-stage:has(.portrait-peel)>.portrait-artwork[data-ready="true"]{opacity:1}}

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { HomeMotion, RateLimiterDiagram } from '@/components/home-motion';
 import { Portrait } from '@/components/portrait';
 import { OutsidePhotos } from '@/components/outside-photos';
 import { EntryList } from '@/components/content-ui';
@@ -14,6 +15,7 @@ export default function Home() {
     'rate-limiter': { src: '/projects/rate-limiter.svg', title: 'Rate limiters & shared state' },
   };
   return <>
+    <HomeMotion />
     <section className="hero hero-identity page-width" aria-labelledby="intro">
       <div className="eyebrow"><span className="dot" /> Based in India</div>
       <h1 id="intro"><span className="hero-name">Pawan Mishra<span className="period">,</span></span><em className="hero-role">Software Engineer<span className="period">.</span></em></h1>
@@ -27,7 +29,7 @@ export default function Home() {
       <div className="section-content">
         <h2 id="experience-title">Experience.</h2>
         <ol className="career-timeline" aria-label="Career timeline, most recent first">
-          {profile.experience.map(company => <li className="career-stop" key={company.company}>
+          {profile.experience.map(company => <li className="career-stop" data-motion-reveal key={company.company}>
             <span className="career-period">{company.period}</span>
             <div className="career-position">
               <div className="career-company"><span className="company-logo-slot"><img className={`company-logo ${company.logoClass}`} src={company.logo} width={company.logoWidth} height="32" alt="" /></span><h3>{company.company}</h3></div>
@@ -41,7 +43,7 @@ export default function Home() {
     </section>
     <section className="section page-width engineering-notes" aria-labelledby="notes-title"><div className="section-label">03 / EXPLORING</div><div className="section-content"><div className="section-heading"><h2 id="notes-title">Engineering notes.</h2><Link href="/writing/" className="text-link">All notes <span aria-hidden="true">↗</span></Link></div><div className="notes-grid">{notes.map(note => {
       const diagram = diagrams[note.slug];
-      return <Link className="note-card" href={`/writing/${note.slug}/`} key={note.slug}>{diagram && <div className="note-card-image"><img src={diagram.src} alt="" width="820" height="600" loading="lazy" /></div>}<span className="entry-meta">{note.topic}</span><h3>{diagram?.title ?? note.title}<span aria-hidden="true">↗</span></h3></Link>;
+      return <Link className="note-card" href={`/writing/${note.slug}/`} key={note.slug}>{diagram && <div className="note-card-image">{note.slug === 'rate-limiter' ? <RateLimiterDiagram /> : <img src={diagram.src} alt="" width="820" height="600" loading="lazy" />}</div>}<span className="entry-meta">{note.topic}</span><h3>{diagram?.title ?? note.title}<span aria-hidden="true">↗</span></h3></Link>;
     })}</div></div></section>
     <section className="section page-width outside" id="outside" aria-labelledby="outside-title"><div className="section-label">04 / FIELD NOTES</div><div className="section-content"><h2 id="outside-title">A few frames.</h2><OutsidePhotos /></div></section>
   </>;
