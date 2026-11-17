@@ -204,6 +204,6 @@
 .portrait-peel{position:absolute;inset:0;pointer-events:none;overflow:clip;overflow-clip-margin:40px}
 .portrait-peel .sticker-peel{visibility:hidden}
 .portrait-peel .sticker-peel-hit{pointer-events:none;touch-action:auto}
-.portrait-peel[data-active="true"] .sticker-peel[data-ready="true"]{visibility:visible}
-.portrait-stage:has(.portrait-peel[data-active="true"] .sticker-peel[data-ready="true"])>.portrait-artwork{opacity:0;transition:none}
+.portrait-peel .sticker-peel[data-ready="true"]{visibility:visible}
+.portrait-stage:has(.portrait-peel .sticker-peel[data-ready="true"])>.portrait-artwork{opacity:0;transition:none}
 @media(prefers-reduced-motion:reduce){.portrait-peel{display:none}.portrait-stage:has(.portrait-peel)>.portrait-artwork[data-ready="true"]{opacity:1}}

@@ -11,6 +11,7 @@ export interface StickerPeelProps
   extends Omit<HTMLAttributes<HTMLDivElement>, 'style' | 'draggable' | 'onDragStart' | 'onDragEnd'> {
   imageSrc: string;
   scrollPeel?: number;
+  textureSource?: HTMLCanvasElement;
   width?: number;
   rotate?: number;
   peelDirection?: number;
@@ -37,6 +38,7 @@ export interface StickerPeelProps
 type Settings = {
   imageSrc: string;
   scrollPeel?: number;
+  textureSource?: HTMLCanvasElement;
   width: number;
   rotate: number;
   peelDirection: number;
@@ -372,6 +374,7 @@ const convexHull = (points: [number, number][]) => {
 const StickerPeel = ({
   imageSrc,
   scrollPeel,
+  textureSource,
   width = 200,
   rotate = 0,
   peelDirection = 0,
@@ -403,6 +406,7 @@ const StickerPeel = ({
   const settings: Settings = {
     imageSrc,
     scrollPeel,
+    textureSource,
     width: Math.max(16, width),
     rotate: toRadians(rotate),
     peelDirection: toRadians(peelDirection),
@@ -569,6 +573,7 @@ const StickerPeel = ({
     let last = 0;
     let visible = true;
     let loadedSrc: string | null = null;
+    let loadedTexture: HTMLCanvasElement | undefined;
     let alive = true;
 
     const height = () => settingsRef.current.width * sticker.aspect;
@@ -593,15 +598,16 @@ const StickerPeel = ({
 
     const load = (src: string) => {
       loadedSrc = src;
-      sticker.ready = false;
-      if (!src) return;
-      const image = new Image();
-      image.crossOrigin = 'anonymous';
-      image.decoding = 'async';
-      image.onload = () => {
+      const source = settingsRef.current.textureSource;
+      const refresh = sticker.ready && source && loadedTexture && source.width === loadedTexture.width && source.height === loadedTexture.height;
+      loadedTexture = source;
+      if (!refresh) sticker.ready = false;
+      if (!src && !source) return;
+      const image = source ?? new Image();
+      const upload = () => {
         if (!alive || loadedSrc !== src || !scratchContext) return;
-        const iw = image.naturalWidth || 1;
-        const ih = image.naturalHeight || 1;
+        const iw = image instanceof HTMLImageElement ? image.naturalWidth || 1 : image.width;
+        const ih = image instanceof HTMLImageElement ? image.naturalHeight || 1 : image.height;
         const fit = Math.min(1, MAX_TEXTURE / (Math.max(iw, ih) * (1 + 2 * PAD)));
         const w = Math.max(1, Math.round(iw * fit));
         const h = Math.max(1, Math.round(ih * fit));
@@ -624,6 +630,7 @@ const StickerPeel = ({
         sticker.meshX = scratch.width / w;
         sticker.meshY = scratch.height / h;
         sticker.texel = scratch.width;
+        if (refresh) { wake(); return; }
         const maskW = Math.max(8, Math.round(MASK_SIZE * Math.min(1, iw / ih)));
         const maskH = Math.max(8, Math.round(MASK_SIZE * Math.min(1, ih / iw)));
         scratch.width = maskW;
@@ -667,11 +674,16 @@ const StickerPeel = ({
         sticker.maskH = maskH;
         sticker.hull = convexHull(points);
         sticker.ready = true;
-        root.dataset.ready = "true";
         layout();
         wake();
       };
-      image.src = src;
+      if (image instanceof HTMLCanvasElement) upload();
+      else {
+        image.crossOrigin = 'anonymous';
+        image.decoding = 'async';
+        image.onload = upload;
+        image.src = src;
+      }
     };
 
     let resizePending = false;
@@ -878,7 +890,7 @@ const StickerPeel = ({
       const s = settingsRef.current;
       const dt = last ? clamp((now - last) / 1000, 0.001, 1 / 30) : 1 / 60;
       last = now;
-      if (s.imageSrc !== loadedSrc) load(s.imageSrc);
+      if (s.imageSrc !== loadedSrc || s.textureSource !== loadedTexture) load(s.imageSrc);
       const h = height();
       if (state.intro < 1 && sticker.ready) state.intro = Math.min(1, state.intro + dt / 1.1);
       const press = state.press;
@@ -944,6 +956,7 @@ const StickerPeel = ({
       state.light.z += (lightTarget.z - state.light.z) * follow;
       canvas.style.opacity = String(clamp(state.intro / 0.12, 0, 1));
       draw();
+      if (sticker.ready) root.dataset.ready = "true";
       const moving =
         (state.intro < 1 && sticker.ready) ||
         press ||

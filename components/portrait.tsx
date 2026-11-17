@@ -23,6 +23,7 @@ export function Portrait() {
   const stage = useRef<HTMLDivElement>(null);
   const sprites = useRef<Partial<Record<Gaze, SVGGElement | null>>>({});
   const [reducedMotion, setReducedMotion] = useState(true);
+  const [gaze, setGaze] = useState<Gaze>(centerFrame);
   const [assetState, setAssetState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [loadAttempt, setLoadAttempt] = useState(0);
   const assetsReady = useRef(false);
@@ -58,6 +59,7 @@ export function Portrait() {
       sprites.current[active]?.setAttribute('opacity', '0');
       sprites.current[next]?.setAttribute('opacity', '1');
       active = next;
+      setGaze(next);
     };
     const update = () => {
       frame = 0;
@@ -113,7 +115,7 @@ export function Portrait() {
       </g>)}
     </svg>
     </div>
-    {assetState === 'ready' && <PortraitPeel artwork={artwork} eyes={eyes} />}
+    {assetState === 'ready' && <PortraitPeel artwork={artwork} eyes={eyes} gaze={gaze} frames={frames} />}
     <PortraitObjects motionPaused={reducedMotion || assetState !== 'ready'} />
     </div><span className="hand portrait-note">Just keeping an eye<br />on Everything.</span></div>;
 }
