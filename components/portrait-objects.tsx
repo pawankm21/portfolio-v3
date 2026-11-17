@@ -4,11 +4,11 @@ import { useEffect, useId, useRef, useState } from 'react';
 
 type ObjectName = 'book' | 'laptop' | 'camera' | 'shoes' | 'electronics';
 const objects: { id: ObjectName; label: string; title: string; text: string; href: string; link: string }[] = [
-  { id: 'book', label: 'Reading & curiosity', title: 'One more rabbit hole.', text: 'Systems, AI, electronics. There’s usually another question worth following.', href: '/writing/', link: 'Open the notebook' },
-  { id: 'laptop', label: 'Software & building', title: 'Ideas into software.', text: 'Thoughtful design, useful experiments, and the satisfaction of making something work.', href: '/projects/', link: 'See what I’m building' },
-  { id: 'camera', label: 'Travel & exploring', title: 'A change of scenery.', text: 'I like travelling, exploring new places, and seeing where a detour leads.', href: '#outside', link: 'Outside the terminal' },
-  { id: 'electronics', label: 'Electronics & tinkering', title: 'Beyond the screen.', text: 'Learning electronics and exploring how software meets the physical world. One small experiment at a time.', href: '/writing/', link: 'Follow the questions' },
-  { id: 'shoes', label: 'Running & movement', title: 'A little time on my feet.', text: 'Running and working out help me step away from the screen and reset.', href: '#outside', link: 'Meet the other side' },
+  { id: 'book', label: 'Engineering notes', title: 'The notebook.', text: 'Notes on software, systems, and hardware.', href: '/writing/', link: 'Read the notes' },
+  { id: 'laptop', label: 'Software projects', title: 'On the workbench.', text: 'Personal projects, from web apps to embedded software.', href: '/projects/', link: 'View projects' },
+  { id: 'camera', label: 'Travel photos', title: 'A few frames.', text: 'Photos from my travels.', href: '/#outside', link: 'View photos' },
+  { id: 'electronics', label: 'Electronics', title: 'ESP32 Quad Bot.', text: 'A four-legged robot I’m building around an ESP32.', href: '/projects/esp32-quad-bot/', link: 'See the build' },
+  { id: 'shoes', label: 'Running', title: 'Running.', text: 'A pair of running shoes belongs here, too.', href: '/#outside', link: 'A few frames' },
 ];
 function Illustration({ name }: { name: ObjectName }) {
   return <svg viewBox="0 0 64 64" fill="none" stroke="#34372f" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -37,7 +37,7 @@ export function PortraitObjects({ motionPaused }: { motionPaused: boolean }) {
     {objects.map(item => <button key={item.id} ref={node => { triggers.current[item.id] = node; }} type="button" className={`floating-object object-${item.id}`} aria-label={item.label} aria-expanded={active === item.id} aria-controls={active === item.id ? panelId : undefined} onClick={() => setActive(active === item.id ? null : item.id)}><Illustration name={item.id} /><span className="object-label">{item.label}</span></button>)}
     {selected && <section id={panelId} className="object-note" aria-labelledby={`${panelId}-title`}>
       <button className="object-close" type="button" aria-label="Close note" onClick={() => { setActive(null); triggers.current[selected.id]?.focus(); }}>×</button>
-      <span className="entry-meta">A NOTE FROM THE MARGINS</span><h3 id={`${panelId}-title`}>{selected.title}</h3><p>{selected.text}</p><Link className="text-link" href={selected.href} onClick={() => setActive(null)}>{selected.link}<span aria-hidden="true">↗</span></Link>
+      <h3 id={`${panelId}-title`}>{selected.title}</h3><p>{selected.text}</p><Link className="text-link" href={selected.href} onClick={() => setActive(null)}>{selected.link}<span aria-hidden="true">↗</span></Link>
     </section>}
   </div>;
 }
