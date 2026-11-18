@@ -44,7 +44,10 @@ export default function Home() {
     <section className="section page-width engineering-notes" aria-labelledby="notes-title"><div className="section-label">03 / EXPLORING</div><div className="section-content"><div className="section-heading"><h2 id="notes-title">Engineering notes.</h2><Link href="/writing/" className="text-link">All notes <span aria-hidden="true">↗</span></Link></div><div className="notes-grid">{notes.map(note => {
       const diagram = diagrams[note.slug];
       return <Link className="note-card" href={`/writing/${note.slug}/`} key={note.slug}>{diagram && <div className="note-card-image">{note.slug === 'rate-limiter' ? <RateLimiterDiagram /> : <img src={diagram.src} alt="" width="820" height="600" loading="lazy" />}</div>}<span className="entry-meta">{note.topic}</span><h3>{diagram?.title ?? note.title}<span aria-hidden="true">↗</span></h3></Link>;
-    })}</div></div></section>
+    })}</div>
+      <p className="lede">I keep track of what I’m learning in Notion.</p>
+      <a className="text-link" href="https://pawan-mishra.notion.site/pawan-kumar-mishra-me">Browse my learning database <span aria-hidden="true">↗</span></a>
+    </div></section>
     <section className="section page-width outside" id="outside" aria-labelledby="outside-title"><div className="section-label">04 / FIELD NOTES</div><div className="section-content"><h2 id="outside-title">A few frames.</h2><OutsidePhotos /></div></section>
   </>;
 }
