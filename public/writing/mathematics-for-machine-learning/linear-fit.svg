@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 600">
+  <title>Fitting a line to house prices</title>
+  <desc>Observed house prices scatter around a rising line. Dashed vertical segments show the residuals between observations and predictions.</desc>
+  <rect width="820" height="600" rx="16" fill="#faf9f3"/>
+  <path d="M126 145H728 M126 225H728 M126 305H728 M126 385H728" stroke="#e1e2d8" stroke-width="2"/>
+  <path d="M126 97V465H728" fill="none" stroke="#777d6d" stroke-width="3"/>
+  <path d="M165 428L700 145" stroke="#68764f" stroke-width="6" stroke-linecap="round"/>
+  <path d="M220 399V375 M310 351V396 M400 304V253 M490 256V300 M580 208V164 M665 164V200"
+        fill="none" stroke="#b64b35" stroke-width="3" stroke-dasharray="7 6"/>
+  <g fill="#b64b35" stroke="#faf9f3" stroke-width="3">
+    <circle cx="220" cy="375" r="10"/>
+    <circle cx="310" cy="396" r="10"/>
+    <circle cx="400" cy="253" r="10"/>
+    <circle cx="490" cy="300" r="10"/>
+    <circle cx="580" cy="164" r="10"/>
+    <circle cx="665" cy="200" r="10"/>
+  </g>
+  <g fill="#52584a" font-family="system-ui, sans-serif" font-size="28">
+    <text x="126" y="68">House price</text>
+    <text x="728" y="518" text-anchor="end">House size</text>
+  </g>
+</svg>

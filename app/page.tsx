@@ -10,6 +10,7 @@ export default function Home() {
   const featured = projects.filter(project => ['pennyvoice', 'esp32-quad-bot'].includes(project.slug));
   const notes = getEntries('writing');
   const diagrams: Record<string, { src: string; title: string }> = {
+    'mathematics-for-machine-learning': { src: '/writing/mathematics-for-machine-learning/linear-fit.svg', title: 'Mathematics for machine learning' },
     'how-nand-flash-works': { src: '/writing/how-nand-flash-works/lifecycle.svg', title: 'How NAND flash works' },
     'google-docs-system-design': { src: '/writing/google-docs-system-design/architecture.svg', title: 'Concurrent edits & offline sync' },
     'rate-limiter': { src: '/projects/rate-limiter.svg', title: 'Rate limiters & shared state' },
