@@ -1,0 +1,132 @@
+---
+title: "Mathematics for machine learning"
+summary: "My notes on the math behind fitting models, from row reduction and PCA to gradient descent and binary classification."
+topic: "AI & LLM engineering"
+status: "note"
+published: true
+date: "2026-11-22"
+related: []
+---
+
+Suppose I want to predict the price of a house. I have its size, the number of bedrooms, and the prices of houses that have already sold. How do I turn those columns into a prediction? Once I have a prediction, how do I change the model so the next one is closer?
+
+This is where the linear algebra and calculus in my machine learning notes meet. A vector holds the features for one house. A matrix holds them for the whole dataset. A loss function tells me how far off the predictions are, and its derivatives tell me how to adjust the weights.
+
+## Vectors, matrices, and linear equations
+
+For one house, the feature vector might be `x = [size, bedrooms]`. A linear model predicts the price with `ŷ = wᵀx + b`. The dot product multiplies each feature by its weight and adds the results. The bias `b` shifts the prediction by a constant. Stack one house per row in a matrix `X`, and `Xw` gives the weighted sums for all the houses at once.
+
+Gaussian elimination, also known as row reduction, is a method for solving systems of linear equations. Write the coefficients in a matrix and append the right-hand side as one more column. Swapping rows, multiplying a row by a nonzero number, or adding a multiple of one row to another preserves the solution.
+
+Here’s the example from my notes. The vertical bar separates the coefficients from the right-hand side.
+
+```text
+[ 1  2  1 |  4 ]      [ 1   2  1 | 4 ]
+[ 2  3  3 |  9 ]  →   [ 0  -1  1 | 1 ]
+[ 3  5  6 | 14 ]      [ 0   0  2 | 1 ]
+```
+
+Subtract twice the first row from the second and three times the first row from the third. Then subtract the new second row from the third. Back-substitution gives `z = 0.5`, `y = −0.5`, and `x = 4.5`. Continuing upward to clear entries above each pivot gives reduced row echelon form.
+
+Put a set of vectors into the columns of a matrix and row-reduce it. If every column has a pivot, the vectors are linearly independent. For a square matrix, a nonzero determinant tells us the same thing. In a housing dataset, if one feature is exactly twice another, several combinations of weights can give the same predictions. The data can’t identify those weights separately.
+
+Real sale prices rarely satisfy one exact system of equations. With least squares, we choose weights that minimise the sum of squared residuals. At the solution, the residual vector is perpendicular to the feature columns. With a column of ones included for the bias, this gives the normal equations `XᵀXw = Xᵀy`.
+
+## Eigenvectors and eigenvalues
+
+An eigenvector is a nonzero vector `v` for which applying a matrix `A` gives a scalar multiple of that vector. We write this as `Av = λv`, where `λ` is the eigenvalue. To find the eigenvalues, solve `det(A − λI) = 0`. For each solution, find a nonzero vector that satisfies `(A − λI)v = 0`.
+
+For the matrix with rows `[2, 1]` and `[1, 2]`, the characteristic equation is `(2 − λ)² − 1 = 0`. The direction `[1, 1]` is scaled by 3, and `[1, −1]` is scaled by 1.
+
+The same example makes repeated matrix multiplication easier to picture. If the next state is `xₜ₊₁ = Axₜ`, a component along `[1, 1]` grows by a factor of 3 at each step, while a component along `[1, −1]` stays fixed. If a matrix has a full basis of eigenvectors, we can write `A = PDP⁻¹` and compute `Aᵗ = PDᵗP⁻¹`. When all eigenvalues have magnitude below 1, every initial state tends to zero. An eigenvalue with magnitude above 1 gives a growing mode. At magnitude 1, the behaviour depends on the matrix.
+
+## Variance, covariance, and PCA
+
+Variance measures how spread out a set of values is. Sample variance is the sum of the squared differences from the sample mean, divided by `n − 1`. Sample covariance uses the product of the deviations for two features instead.
+
+```text
+Var(x)    = Σᵢ (xᵢ − x̄)² / (n − 1)
+Cov(x, y) = Σᵢ (xᵢ − x̄)(yᵢ − ȳ) / (n − 1)
+```
+
+A positive covariance means that when one variable is above its mean, the other tends to be above its mean too. A covariance matrix puts the feature variances on the diagonal and the pairwise covariances everywhere else. It’s symmetric, and the variance along any direction is nonnegative. For a centred data matrix `X` with one observation per row, the sample covariance matrix is `Σ = XᵀX / (n − 1)`.
+
+Principal component analysis (PCA) projects the data onto directions that retain as much variance as possible. The first principal component is the direction of maximum variance. The second captures the most variance among directions perpendicular to the first. These directions are the eigenvectors of the covariance matrix, and their eigenvalues give the variance along each direction.
+
+1. Centre each feature. Divide by its standard deviation if you want each feature to start on the same scale.
+2. Compute the covariance matrix and find its eigenvalues and eigenvectors.
+3. Sort the eigenvectors by descending eigenvalue. Put the first `k` in the columns of `Vₖ` and project the centred or standardised data with `Z = XVₖ`.
+
+My notes use five pairs: `(2.5, 2.4)`, `(0.5, 0.7)`, `(2.2, 2.9)`, `(1.9, 2.2)`, and `(3.1, 3.0)`. After standardising both columns using sample standard deviations, the covariance matrix has 1 on the diagonal and about 0.940 off the diagonal. The eigenvalues are about 1.940 and 0.060. Projecting onto the unit vector `[1, 1] / √2` gives one number per pair and keeps about 97% of the total variance.
+
+PCA creates new features from combinations of the original ones. Feature selection keeps a subset of the original columns. Since PCA uses the features alone, it can discard a low-variance direction that matters for predicting the target.
+
+## From slope to gradient descent
+
+The slope of a line is the change in `y` divided by the change in `x`. On a curve, the slope depends on where we measure it. The derivative is the slope of the tangent at that point.
+
+```text
+f′(a) = lim(h → 0) [f(a + h) − f(a)] / h
+```
+
+At an interior minimum or maximum of a differentiable function, the first derivative is zero. At a stationary point, a positive second derivative gives a local minimum, while a negative one gives a local maximum. A zero second derivative leaves the test inconclusive.
+
+A partial derivative measures how a function changes when one input changes and the others are held constant. The gradient puts all the partial derivatives into a vector. It points in the direction of steepest ascent, so gradient descent takes a small step in the opposite direction.
+
+```text
+θ ← θ − η∇J(θ)
+```
+
+Here `θ` holds the parameters, `J` is the loss, and `η` is the learning rate. For `J(θ) = θ²`, the gradient is `2θ`. Starting at 3 with a learning rate of 0.1 gives 2.4, then 1.92. A small learning rate can make training slow. A large one can overshoot the minimum or cause the updates to diverge.
+
+Batch gradient descent uses the entire training set for each update. Stochastic gradient descent uses one example at a time. Mini-batch gradient descent uses a small group of examples, allowing the model to update more often than full-batch training while averaging over some of the noise in individual examples.
+
+## Fit a line or a polynomial
+
+For the house prices, start with mean squared error (MSE). Subtract the actual price from each prediction, square the differences, and average them. Squaring keeps errors of opposite signs from cancelling and gives larger errors more weight. RMSE is the square root of MSE, so it’s in the same units as the prices.
+
+```text
+J(w, b) = (1/m) Σᵢ (ŷᵢ − yᵢ)²
+∇w J    = (2/m) Xᵀ(ŷ − y)
+∂J/∂b   = (2/m) Σᵢ (ŷᵢ − yᵢ)
+```
+
+The factor of 2 comes from differentiating the square. For each weight, the chain rule multiplies the residual by the corresponding input feature. The derivative with respect to the bias uses the same residual with a multiplier of 1.
+
+If price bends with size, we can fit `ŷ = b + w₁x + w₂x²`. The curve is quadratic in size and linear in the parameters, so we can still use least squares by adding a column for `x²`. The degree of the polynomial controls how flexible the curve is. A higher degree can reduce training error while doing worse on houses the model hasn’t seen.
+
+In practice I’d look at distributions, missing values, and outliers before fitting anything. I might combine floor areas into a `TotalSF` feature and one-hot encode categorical columns. Split the data before fitting the imputer or scaler. Start with linear regression as a baseline, compare changes using validation RMSE or cross-validation on the training set, and keep test data for the final estimate.
+
+## Newton’s method and the Hessian
+
+Newton’s method finds a root by following the tangent line to its intersection with the horizontal axis. The update is `x ← x − f(x)/f′(x)`. For `f(x) = x² − 2`, starting at 1 gives 1.5, then about 1.4167, approaching `√2`.
+
+For optimisation, apply the same idea to `J′(x) = 0`. Now the update uses `J′(x)/J″(x)`. With several parameters, the second derivative becomes the Hessian, a matrix of second partial derivatives. Solve `HΔ = ∇J` for the step, then subtract `Δ` from the current parameters. Gradient descent uses the slope, while Newton’s method also uses the local curvature to choose the step.
+
+At a stationary point, a positive definite Hessian gives a local minimum, a negative definite one gives a local maximum, and an indefinite one gives a saddle point. The test can be inconclusive if the Hessian has zero eigenvalues. Newton’s method can converge quickly near a minimum, but forming and solving with the Hessian can be expensive. It can also take a poor step when the starting point is far from the minimum.
+
+## From a price to a class
+
+Now change the question. Instead of predicting a price, predict whether a house is expensive or affordable. A classic perceptron computes a weighted sum plus a bias and applies a hard threshold. A sigmoid unit starts with the same score, then maps it to a number between 0 and 1. Trained with binary cross-entropy, this single unit is logistic regression.
+
+```text
+z = wᵀx + b
+p = σ(z) = 1 / (1 + e⁻ᶻ)
+Loss = −(1/m) Σᵢ [yᵢ log(pᵢ) + (1 − yᵢ) log(1 − pᵢ)]
+```
+
+Here `p` is the model’s estimated probability for class 1. A threshold of 0.5 predicts “expensive” when `z ≥ 0`. That boundary is a line for two features and a hyperplane in higher dimensions. The sigmoid changes how we interpret the score, while the boundary stays linear in the supplied features.
+
+For an expensive house, the loss reduces to `−log(p)`. For an affordable one, it reduces to `−log(1 − p)`. So a confident wrong prediction gets a large penalty. The sigmoid has derivative `p(1 − p)`. Applying the chain rule to cross-entropy gives `p − y` as the derivative of a single example’s loss with respect to its score. Multiply by each input feature to get the weight derivatives, average over the examples, and use the same gradient descent update.
+
+A layer in a neural network computes several weighted sums together as `Wx + b` and applies an activation to each result. Without nonlinear activations between layers, stacking those operations still gives a single affine transformation. With nonlinear activations, the network can represent more complex relationships.
+
+## Where I’ll pick this up
+
+I’ll add to this series as I work through more advanced statistics and start coding these ideas. I’ll come to transformers and generative AI later in the series.
+
+## Sources
+
+- [My machine learning notes](https://pawan-mishra.notion.site/19b04562ca3940c49a492309a5b761dc?v=312afef2f9c7438db17fb7c00bc2f05f)
+- [3Blue1Brown’s Neural Networks series](https://www.3blue1brown.com/topics/neural-networks)
+- [Andrew Ng’s Machine Learning Specialization](https://www.deeplearning.ai/specializations/machine-learning) for the maths behind regression, classification, and gradient descent
