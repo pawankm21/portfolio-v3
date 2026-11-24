@@ -1,0 +1,113 @@
+.pet-launcher {
+  position: fixed;
+  right: 16px;
+  bottom: max(16px, env(safe-area-inset-bottom));
+  z-index: 29;
+  width: 64px;
+  height: 64px;
+  display: grid;
+  place-items: end center;
+  padding-bottom: 6px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: #e5eadb;
+  box-shadow: 0 4px 16px #24252220;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.pet-launcher:active { cursor: grabbing; }
+.pet-face {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  place-items: end center;
+  width: 42px;
+  height: 32px;
+  padding-bottom: 3px;
+  border: 1px solid #b9a98e;
+  border-radius: 50% 50% 45% 45%;
+  color: var(--ink);
+  background: #fff7e7;
+}
+.pet-face::before, .pet-face::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  top: -20px;
+  width: 12px;
+  height: 25px;
+  border: 1px solid #b9a98e;
+  border-radius: 60%;
+  background: #e7ad9c;
+  box-shadow: inset 0 0 0 2px #fff7e7;
+}
+.pet-face::before { left: 7px; transform: rotate(-15deg); }
+.pet-face::after { right: 7px; transform: rotate(15deg); }
+.pet-face span::before {
+  content: '';
+  position: absolute;
+  top: 12px;
+  left: 10px;
+  width: 4px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 16px 0 currentColor, -3px 6px #e7ad9c, 19px 6px #e7ad9c;
+}
+.pet-chat {
+  position: fixed;
+  z-index: 30;
+  right: 16px;
+  bottom: max(92px, calc(env(safe-area-inset-bottom) + 76px));
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  width: min(330px, calc(100% - 32px));
+  max-height: calc(100dvh - max(104px, calc(env(safe-area-inset-bottom) + 88px)));
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--paper);
+  box-shadow: 0 12px 36px #24252225;
+}
+.pet-chat[hidden] { display: none; }
+.pet-chat header, .pet-form {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+}
+.pet-chat header { border-bottom: 1px solid var(--line); }
+.pet-chat h2 { font-size: 28px; letter-spacing: -.5px; }
+.pet-chat header button { min-width: 44px; min-height: 44px; font-size: 24px; }
+.pet-log { overflow-y: auto; overscroll-behavior: contain; padding: 12px; }
+.pet-log p {
+  width: fit-content;
+  max-width: 90%;
+  margin-bottom: 8px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: #e5eadb;
+  overflow-wrap: anywhere;
+}
+.pet-log .pet-question { margin-left: auto; background: #f2dfd4; }
+.pet-form { border-top: 1px solid var(--line); }
+.pet-form input {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fffaf0;
+  font-size: 16px;
+}
+.pet-form button {
+  min-height: 44px;
+  padding-inline: 12px;
+  border-radius: 8px;
+  background: var(--ink);
+  color: var(--paper);
+}
+.pet-form button:disabled { opacity: .55; cursor: default; }
